@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="zxx">
+
+<head>
+    <title>Find Asin HotTrend - By Shark PL</title>
+    <!-- Meta tag Keywords -->
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="keywords" content="Grand Coming Soon Responsive Widget,Login form widgets, Sign up Web forms , Login signup Responsive web form,Flat Pricing table,Flat Drop downs,Registration Forms,News letter Forms,Elements"
+    />
+    <link rel="icon" href="/images/favicon.png">
+    <script>
+        addEventListener("load", function () {
+            setTimeout(hideURLbar, 0);
+        }, false);
+
+        function hideURLbar() {
+            window.scrollTo(0, 1);
+        }
+    </script>
+    <!-- Meta tag Keywords -->
+    <!-- Style Sheets -->
+    <link href="/css/style.css" rel="stylesheet" type="text/css" media="all" />
+    <!-- //Style Sheets -->
+
+    <!-- Web Fonts -->
+    <link href="//fonts.googleapis.com/css?family=Josefin+Sans:300,400,600,700" rel="stylesheet">
+    <link href='//fonts.googleapis.com/css?family=Montserrat:400,700' rel='stylesheet' type='text/css'>
+    <link href='//fonts.googleapis.com/css?family=Open+Sans:400,300,300italic,400italic,600,600italic,700,700italic,800,800italic'
+        rel='stylesheet' type='text/css'>
+    <!-- //Web Fonts -->
+</head>
+
+<body>
+    <!--<div style="text-align: left;margin-top: 15px;margin-left: 50px";>
+        <a href="/manage" style="color: #ffffff;text-decoration: underline">Manage</a>
+    </div>-->
+    <div class="main-agile content">
+        <!-- title name-->
+        <h1>Shark PL</h1>
+        <p class="para-w3ls process" id="processing">Processing...</p>
+        <%if(typeof success !== 'undefined'){%><p class="para-w3ls" id="success">Thành công</p><%}%>
+        <div class="subscribe wthree">
+            <h2>Tìm kiếm sản phẩm</h2>
+            <div class="contact-form">
+                <form id="form-search">
+                    <div id="div-input-search">
+                        <input type="text" placeholder="Nhập Url tìm kiếm" id="url-find" required>
+                        <input type="submit" id="search" value="Tìm kiếm">
+                        <div class="clear"></div>
+                    </div>
+                    <input type="number" min="0" step="1" placeholder="Min review" title="Min review" id="min-review" required>
+                    <input type="number" min="0" step="1" placeholder="Max review" title="Max review" id="max-review" required>
+                    <input type="number" min="0" step="1" placeholder="Chiều sâu" title="Chiều sâu" value="2" id="depth" required>
+                </form>
+            </div>
+            <div  class="actions">
+                <form action="/upload-csv" method="post" enctype="multipart/form-data">
+                    <div>
+                        <span style="color: #EEEEEE">Tải file đã tìm</span> <input type="file" name="csvFile" required>
+                    </div>
+                    <button type="submit">Upload</button>
+                </form>
+
+            </div>
+        </div>
+        <!-- //form style -->
+    </div>
+    <!-- copyright -->
+    <!-- //copyright -->
+
+    <!-- Js files -->
+    <script src="/js/jquery-2.1.4.min.js"></script>
+
+    <!-- Timer js -->
+    <script src="/js/moment.js"></script>
+    <script src="/js/moment-timezone-with-data.js"></script>
+    <script src="/js/timer.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.1.1/socket.io.js"></script>
+    <script>
+        function makeid() {
+            var text = "";
+            var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+
+            for (var i = 0; i < 64; i++)
+                text += possible.charAt(Math.floor(Math.random() * possible.length));
+            return text;
+        }
+        setTimeout(function () {
+            $("#success").slideUp('slow')
+        },5000)
+        setInterval(function () {
+            let strProcessing = $("#processing").text()
+            strProcessing = strProcessing.replace('Processing','')
+            if(strProcessing.length == 10)
+            {
+                strProcessing = 'Processing.'
+            }else{
+                strProcessing ='Processing'+strProcessing+'.'
+            }
+            $("#processing").text(strProcessing)
+
+        },500)
+    </script>
+    <script>
+        $("#form-search").submit(function(event){
+            $("#processing").css('display', 'block');
+            event.preventDefault()
+            let key = makeid()
+            const socket = io();
+            socket.on(key,data => {
+                $("#processing").css('display', 'none');
+                alert('Đã hoàn thành')
+                window.open('/get-asin?root_url='+$("#url-find").val(),'_blank')
+            })
+            let minReview = $("#min-review").val()
+            let maxReview = $("#max-review").val()
+            let depth = $("#depth").val()
+            $.ajax({
+                type: "POST",
+                url: '/find-product',
+                data: {
+                    url: $("#url-find").val(),
+                    key: key,
+                    minReview: minReview,
+                    maxReview: maxReview,
+                    depth: depth
+                },
+                success: (data) => {
+                    console.log(data)
+                },
+                error: (err) => {
+                    console.log(err)
+                }
+            })
+        })
+    </script>
+</body>
+
+</html>

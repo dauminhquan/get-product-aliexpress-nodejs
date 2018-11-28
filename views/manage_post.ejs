@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="zxx">
+
+<head>
+    <title>Find Asin HotTrend - By Shark PL</title>
+    <!-- Meta tag Keywords -->
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="keywords" content="Grand Coming Soon Responsive Widget,Login form widgets, Sign up Web forms , Login signup Responsive web form,Flat Pricing table,Flat Drop downs,Registration Forms,News letter Forms,Elements"
+    />
+    <link rel="icon" href="/images/favicon.png">
+    <script>
+        addEventListener("load", function () {
+            setTimeout(hideURLbar, 0);
+        }, false);
+
+        function hideURLbar() {
+            window.scrollTo(0, 1);
+        }
+    </script>
+    <!-- Meta tag Keywords -->
+    <!-- Style Sheets -->
+    <link href="/css/style.css" rel="stylesheet" type="text/css" media="all" />
+    <!-- //Style Sheets -->
+
+    <!-- Web Fonts -->
+    <link href="//fonts.googleapis.com/css?family=Josefin+Sans:300,400,600,700" rel="stylesheet">
+    <link href='//fonts.googleapis.com/css?family=Montserrat:400,700' rel='stylesheet' type='text/css'>
+    <link href='//fonts.googleapis.com/css?family=Open+Sans:400,300,300italic,400italic,600,600italic,700,700italic,800,800italic'
+          rel='stylesheet' type='text/css'>
+    <!-- //Web Fonts -->
+</head>
+
+<body>
+<div class="main-agile content">
+    <!-- title name-->
+    <h1>Shark PL</h1>
+    <div class="subscribe wthree">
+        <div class="contact-form">
+            <form id="form-search" method="post">
+                <div id="div-input-search">
+                    <select placeholder="Chọn Url" name="root_url" required id="select-url">
+                        <option>Chọn 1 trường</option>
+                        <% root_urls.forEach(url =>{%>
+                            <option <%if(root_url == url){%> selected <%}%> value="<%= url%>"><%= url%></option>
+                        <%})%>
+                    </select>
+                    <input type="submit" id="search" value="Show">
+                    <div class="clear"></div>
+                </div>
+            </form>
+        </div>
+        <div  class="actions">
+            <a href="/get-asin?root_url=<%=root_url%>" target="_blank" class="button">Export Excel</a>
+            <form action="/manage/upload-csv" method="post" enctype="multipart/form-data">
+                <div>
+                    <input type="text" name="root_url" hidden value="<%=root_url%>">
+                    <span style="color: #EEEEEE">Tải file đã tìm</span> <input type="file" name="csvFile" required>
+                </div>
+                <button type="submit">Upload</button>
+            </form>
+
+        </div>
+        <div class="table-manage">
+            <table class="table">
+                <thead>
+                <tr>
+                    <th><input type="checkbox"></th>
+                    <th>Asin</th>
+                    <th>Keyword</th>
+                    <th>Date time created</th>
+                    <th>Disable</th>
+                    <th>Rank</th>
+                    <th>Review size</th>
+                    <th>Url find</th>
+                    <th>Url found</th>
+                    <th>Url Product</th>
+                </tr>
+                </thead>
+                <tbody>
+                <% product_find.forEach(product => {%>
+                    <tr>
+                        <td><input type="checkbox"></td>
+                        <td><%= product.asin %></td>
+                        <td><%= product.keyword %></td>
+                        <td><%= product.created_at.getFullYear() + '/' + (product.created_at.getMonth() + 1) + '/' + product.created_at.getDate()  %></td>
+                        <td><%= product.reject %></td>
+                        <td><%= product.rank %></td>
+                        <td><%= product.review %></td>
+                        <td><a href="<%= product.root_url %>" target="_blank">root Url</a></td>
+                        <td><a href="<%= product.url_found %>" target="_blank">url found</a></td>
+                        <td><a href="<%= 'https://www.amazon.com'+product.url_product %>" target="_blank">url product</a></td>
+                    </tr>
+                <%})%>
+
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <!-- //form style -->
+</div>
+<!-- copyright -->
+<!-- //copyright -->
+
+<!-- Js files -->
+<script src="/js/jquery-2.1.4.min.js"></script>
+
+<script>
+
+</script>
+</body>
+
+</html>
