@@ -23,21 +23,21 @@ module.exports = {
                 else{
                     textValue = $(item[j]).find("a:eq(0)").text()
                 }
-    
+
                 itemData.push(
                     {
                         text: textValue,
                         skuId: skuId
                     }
                 )
-    
+
             }
             dlsData.push(itemData)
         }
-    
+
         text = text.slice(1)
         let p = [];
-    
+
         if(dlsData.length > 0)
         {
             noi_mang(p,"","",dlsData,0)
@@ -48,17 +48,17 @@ module.exports = {
         }
         let price_text_data = {}
 
-                price_text.price.forEach(item => {
+        price_text.price.forEach(item => {
 
-                    let getPriceData = skuProducts.find(value => {
-                        return value.skuPropIds == item.price
-                    })
-                    if(getPriceData != undefined)
-                    {
-                        price_text_data[item.text] = (parseFloat(getPriceData.skuVal.actSkuMultiCurrencyDisplayPrice == undefined ? getPriceData.skuVal.skuMultiCurrencyDisplayPrice : getPriceData.skuVal.actSkuMultiCurrencyDisplayPrice) + 15).toString()
-                    }
-                })
-       return price_text_data
+            let getPriceData = skuProducts.find(value => {
+                return value.skuPropIds == item.price
+            })
+            if(getPriceData != undefined)
+            {
+                price_text_data[item.text] = (parseFloat(getPriceData.skuVal.actSkuMultiCurrencyDisplayPrice == undefined ? getPriceData.skuVal.skuMultiCurrencyDisplayPrice : getPriceData.skuVal.actSkuMultiCurrencyDisplayPrice) + 15).toString()
+            }
+        })
+        return price_text_data
     }
 };
 
