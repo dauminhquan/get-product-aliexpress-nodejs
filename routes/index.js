@@ -19,15 +19,17 @@ router.get('/', function(req, res, next) {
     res.send('ok')
 });
 router.get('/test',function(req,res,next){
-    searchProduct('bed+sheet+baby+bed+boy',17)
-    res.send('ok')
+    let query = req.query.query
+    query = query.replace(/%20/g,'+')
+    let url = `https://www.aliexpress.com/wholesale?site=glo&g=y&SearchText=${query}`
+    searchProduct(url)
 })
 
 
 
-async function searchProduct(query,page)
+async function searchProduct(url)
 {
-    await axios.get(`https://www.aliexpress.com/wholesale?site=glo&g=y&SearchText=${query}&page=${page}`).then(async response => {
+    await axios.get(url).then(async response => {
         const { window } = new JSDOM(response.data);
         const $ = require('jquery')(window);
         let products = $('.pic')
@@ -51,6 +53,17 @@ async function searchProduct(query,page)
                 }
             }
         }
+        let aNext = $('a.page-next.ui-pagination-next:eq(0)')
+        if(aNext != null)
+        {
+            if($(aNext).attr('href') != undefined)
+            {
+                setTimeout(function () {
+                    searchProduct('https:'+$(aNext).attr('href'))
+                })
+            }
+        }
+
     }).catch(err => {
         console.log(err)
     })
@@ -368,6 +381,7 @@ async function getInfoProduct(item_sku){
 
         let item_name = $('h1.product-name')[0].innerHTML.replace(new RegExp(branchName,'i'),'')
 
+        console.log(item_name)
 
         if(tradeMark == false)
         {
@@ -439,6 +453,7 @@ async function getInfoProduct(item_sku){
                 products.forEach(item => {
                     console.log('khong bien the: ',item.item_sku)
                 })
+                putToServer(product)
             }
             else{
 
@@ -523,7 +538,9 @@ async function getInfoProduct(item_sku){
                         product.product_description = des
                         product.item_sku = item_sku
                         product.item_name = item_name
+                        product.standard_price = item.standard_price
                         temp = updateInfoProduct(temp,item)
+                        putToServer(temp)
                         products.push(temp)
                     })
                 }
@@ -552,5 +569,11 @@ function updateInfoProduct(product,info)
     })
     return product
 }
-
+function putToServer(data) {
+    axios.put('http://localhost:8000/api/product-aliexpress',data).then(data => {
+        console.log('thanh cong')
+    }).catch(err => {
+        console.log(err)
+    })
+}
 module.exports = router;
