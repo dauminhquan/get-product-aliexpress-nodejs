@@ -14,7 +14,7 @@ const helper = require('../helpers/helper')
 const startProduct = 5
 /* GET home page. */
 router.get('/', function(req, res, next) {
-    let item_sku = '32823198839'
+    let item_sku = '32953605626'
     getInfoProduct(item_sku)
     res.send('ok')
 });
@@ -158,26 +158,27 @@ function getSpecifics($){
     let bulletpoints = {
 
     }
+    let allText = specificsLisText.join(' * ')
+    let stop = parseInt(allText.length / 5) - 1
     let jB = 0
     for(let i = 1 ;i <= 5 ; i++)
     {
         let str = ''
         for(let  j = jB ; j < specificsLisText.length ; j++)
         {
-            if((str + specificsLisText).length < 300)
+
+            if((str + specificsLisText[j]).length < stop)
             {
-                str+=specificsLisText+', '
+                str+=specificsLisText[j]+', '
+
             }
             else{
                 jB = j
-                bulletpoints['bullet_point'+(i)]
+                bulletpoints['bullet_point'+(i)] = str
                 break
             }
         }
     }
-    specificsLisText.forEach(item => {
-
-    })
     return {
         specifics: '<p>'+specificsLisText.join('</p><p>')+'</p>',
         bulletpoints: bulletpoints
@@ -381,7 +382,7 @@ async function getInfoProduct(item_sku){
 
         let item_name = $('h1.product-name')[0].innerHTML.replace(new RegExp(branchName,'i'),'')
 
-        console.log(item_name)
+        // console.log(item_name)
 
         if(tradeMark == false)
         {
@@ -534,11 +535,12 @@ async function getInfoProduct(item_sku){
                             size_map:"",
                         }
                         temp =  updateInfoProduct(temp,image_data)
+                        // console.log(specifics_bulletpoints)
                         temp = updateInfoProduct(temp,specifics_bulletpoints.bulletpoints)
-                        product.product_description = des
-                        product.item_sku = item_sku
-                        product.item_name = item_name
-                        product.standard_price = item.standard_price
+                        temp.product_description = des
+                        temp.item_sku = item_sku
+                        temp.item_name = item_name
+                        temp.standard_price = item.standard_price
                         temp = updateInfoProduct(temp,item)
                         putToServer(temp)
                         products.push(temp)
@@ -573,7 +575,7 @@ function putToServer(data) {
     axios.put('http://localhost:8000/api/product-aliexpress',data).then(data => {
         console.log('thanh cong')
     }).catch(err => {
-        console.log(err)
+        console.log('Thất bại')
     })
 }
 module.exports = router;
