@@ -3,15 +3,7 @@ let router = express.Router();
 const jsdom = require("jsdom");
 const { JSDOM } = jsdom;
 const axios = require('axios')
-const excel = require('node-excel-export');
-var Product = require('../model/products')
-var RootUrl = require('../model/root_url')
-var BackList = require('../model/back_list')
-const fs = require("fs");
-const csv = require('fast-csv')
-const vm = require('vm');
 const helper = require('../helpers/helper')
-const startProduct = 5
 var processSearch = {
 
 }
@@ -43,7 +35,16 @@ router.get('/search',function(req,res,next){
     query = query.replace(/%20/g,'+')
     query = query.replace(/ /g,'+')
     let multiplication = parseFloat(req.query.multiplication)
-    let url = `https://www.aliexpress.com/wholesale?isPremium=y&SearchText=${query}`
+    if(multiplication < 2.5)
+    {
+        multiplication = 2.5
+    }
+    let page = req.query.page
+    if(page == undefined || parseInt(page) < 1)
+    {
+        page = 1
+    }
+    let url = `https://www.aliexpress.com/wholesale?isPremium=y&SearchText=${query}&page=${page}`
     // axios.get(url).then(response => {
     //     return res.send(response.data)
     // })
@@ -57,11 +58,15 @@ router.get('/search',function(req,res,next){
 
 async function searchProduct(url,multiplication,search)
 {
+    console.log(url.split('&').find(item => {
+        return item.includes('page=')
+    }))
     if(processSearch[search] ==  undefined)
     {
         processSearch[search] = true
+        processSearch[search+'-block'] = 0
     }
-   if(processSearch[search] == true)
+   if(processSearch[search] == true && (processSearch[search+'-block'] < 2 || processSearch[search+'-block'] == undefined))
    {
        await axios.get(url).then(async response => {
            const { window } = new JSDOM(response.data);
@@ -69,14 +74,12 @@ async function searchProduct(url,multiplication,search)
            let products = $('.pic')
            if(products.length == 0 || products.length == undefined)
            {
-               console.log('Đang bị block')
-               if(url.includes('https://www.aliexpress.com/wholesale?isPremium=y&SearchText'))
-               {
-                   console.log('Đợi 10 phút để tiếp tục')
-                   setTimeout(function () {
-                       searchProduct(url,multiplication,query)
-                   },600000)
-               }
+               processSearch[search+'-block']++
+               console.log('Đang bị block - Đang đợi 10 phút để tiếp tục')
+               console.log('Đợi 10 phút để tiếp tục')
+               setTimeout(function () {
+                   searchProduct(url,multiplication,search)
+               },600000)
 
 
            }
@@ -94,9 +97,9 @@ async function searchProduct(url,multiplication,search)
                        })
                        let indexHtml = item_sku.indexOf('.html')
                        item_sku = item_sku.slice(0,indexHtml)
-                       console.log(item_sku)
+
                        let checkEpacket = await checkEPacket(item_sku)
-                       console.log(checkEpacket)
+
                        if(checkEpacket.result == true)
                        {
                            await getInfoProduct(item_sku,checkEpacket.price,multiplication)
@@ -122,6 +125,8 @@ async function searchProduct(url,multiplication,search)
        })
    }
    else{
+       delete  processSearch[search]
+       delete  processSearch[search+'-block']
        console.log("Da dung tien trinh")
    }
 }
@@ -138,7 +143,7 @@ async function checkTradeMark(textBrandName){
             trademark = true
         }
     }).catch(err => {
-        console.log(err)
+        console.log('Loi check trademark')
     })
     return trademark;
 }
@@ -164,7 +169,7 @@ async function getDesc(url,brandName)
         })
         des = text
     }).catch(err => {
-        console.log(err)
+        console.log('Loi lay mo ta san pham')
     })
 
     return '<p>'+des.join('</p><p>')+'</p>'
@@ -187,7 +192,7 @@ async function checkEPacket(item_sku) {
                 if(maxDate.length > 1)
                 {
                     maxDate = maxDate[1]
-                    if(i.isTracked == true && parseInt(maxDate) < 40 && (i.localPrice < result.price || result.price == -1))
+                    if((i.isTracked == true && parseInt(maxDate) < 40 && (i.localPrice < result.price || result.price == -1)) || i.companyDisplayName == "ePacket")
                     {
                         result.result = true
                         result.price = i.localPrice
@@ -218,9 +223,8 @@ async function checkEPacket(item_sku) {
         }
 
     }).catch(err => {
-        console.log(err)
+        console.log('loi check e packet')
     })
-    console.log(result)
     return result
 }
 
@@ -496,11 +500,6 @@ async function getInfoProduct(item_sku,price_ship,multiplication){
             {
                 // khong co bien the
 
-
-
-
-
-
                 let price = (parseInt($('#j-sku-discount-price').text()) + parseInt(price_ship)) * multiplication + 1.99
                 let product = {
                     item_sku:"",
@@ -639,6 +638,8 @@ async function getInfoProduct(item_sku,price_ship,multiplication){
         //check thuong hieu
 
         // gia san pham
+    }).catch(err => {
+        console.log('loi lay thong tin san pham')
     })
 }
 
@@ -661,7 +662,7 @@ function putToServer(data) {
     }).then(response => {
         console.log(response.data)
     }).catch(err => {
-        console.log(err)
+        console.log('Loi tu server')
     })
 }
 
