@@ -1,5 +1,5 @@
 module.exports = {
-    getPrice($,skuProducts){
+    getPrice($,skuProducts,price_ship,multiplication){
         let dls = $("#j-product-info-sku").find("dl")
         let dlsData = []
         let text = ""
@@ -55,7 +55,7 @@ module.exports = {
             })
             if(getPriceData != undefined)
             {
-                price_text_data[item.text] = (parseFloat(getPriceData.skuVal.actSkuMultiCurrencyDisplayPrice == undefined ? getPriceData.skuVal.skuMultiCurrencyDisplayPrice : getPriceData.skuVal.actSkuMultiCurrencyDisplayPrice) + 15).toString()
+                price_text_data[item.text] = ((parseInt(getPriceData.skuVal.actSkuMultiCurrencyDisplayPrice == undefined ? getPriceData.skuVal.skuMultiCurrencyDisplayPrice : getPriceData.skuVal.actSkuMultiCurrencyDisplayPrice) + price_ship) * multiplication + 1.99).toString()
             }
         })
         return price_text_data
@@ -91,7 +91,6 @@ function noi_mang(p,text,skuId,mang,index) {
                 }
 
             }
-
         }
     }
 }

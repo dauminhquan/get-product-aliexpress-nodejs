@@ -12,63 +12,119 @@ const csv = require('fast-csv')
 const vm = require('vm');
 const helper = require('../helpers/helper')
 const startProduct = 5
+var processSearch = {
+
+}
 /* GET home page. */
 router.get('/', function(req, res, next) {
     let item_sku = '32953605626'
-    getInfoProduct(item_sku)
-    res.send('ok')
+    axios.get(`https://www.aliexpress.com/item/a/${item_sku}.html`).then(response => {
+        return res.send(response.data)
+    }).catch(err => {
+        console.log(err)
+    })
+    // return res.json({
+    //     auth: "reject"
+    // })
 });
-router.get('/test',function(req,res,next){
+
+router.get('/stop-search',function (req,res) {
     let query = req.query.query
     query = query.replace(/%20/g,'+')
-    let url = `https://www.aliexpress.com/wholesale?site=glo&g=y&SearchText=${query}`
-    searchProduct(url)
+    processSearch[query] = false
+    return res.json({
+        "message": "Dừng tiến trình thành công"
+    })
+})
+
+
+router.get('/search',function(req,res,next){
+    let query = req.query.query
+    query = query.replace(/%20/g,'+')
+    query = query.replace(/ /g,'+')
+    let multiplication = parseFloat(req.query.multiplication)
+    let url = `https://www.aliexpress.com/wholesale?isPremium=y&SearchText=${query}`
+    // axios.get(url).then(response => {
+    //     return res.send(response.data)
+    // })
+    searchProduct(url,multiplication,query)
+    return res.json({
+        auth: "reject"
+    })
 })
 
 
 
-async function searchProduct(url)
+async function searchProduct(url,multiplication,search)
 {
-    await axios.get(url).then(async response => {
-        const { window } = new JSDOM(response.data);
-        const $ = require('jquery')(window);
-        let products = $('.pic')
-        for(let i = 0 ;i < products.length ; i++)
-        {
-            let url = $(products[i]).find('a.picRind:eq(0)')
-            if(url.length > 0)
-            {
-                url = $(url).attr('href')
-                url = url.split('/')
+    if(processSearch[search] ==  undefined)
+    {
+        processSearch[search] = true
+    }
+   if(processSearch[search] == true)
+   {
+       await axios.get(url).then(async response => {
+           const { window } = new JSDOM(response.data);
+           const $ = require('jquery')(window);
+           let products = $('.pic')
+           if(products.length == 0 || products.length == undefined)
+           {
+               console.log('Đang bị block')
+               if(url.includes('https://www.aliexpress.com/wholesale?isPremium=y&SearchText'))
+               {
+                   console.log('Đợi 10 phút để tiếp tục')
+                   setTimeout(function () {
+                       searchProduct(url,multiplication,query)
+                   },600000)
+               }
 
-                let item_sku = url.find(item => {
-                    return item.includes('.html')
-                })
-                let indexHtml = item_sku.indexOf('.html')
-                item_sku = item_sku.slice(0,indexHtml)
-                let checkEpacket = await checkEPacket(item_sku)
-                if(checkEpacket == true)
-                {
-                    getInfoProduct(item_sku)
-                }
-            }
-        }
-        let aNext = $('a.page-next.ui-pagination-next:eq(0)')
-        if(aNext != null)
-        {
-            if($(aNext).attr('href') != undefined)
-            {
-                setTimeout(function () {
-                    searchProduct('https:'+$(aNext).attr('href'))
-                })
-            }
-        }
 
-    }).catch(err => {
-        console.log(err)
-    })
+           }
+           else {
+               for(let i = 0 ;i < products.length ; i++)
+               {
+                   let url = $(products[i]).find('a.picRind:eq(0)')
+                   if(url.length > 0)
+                   {
+                       url = $(url).attr('href')
+                       url = url.split('/')
+
+                       let item_sku = url.find(item => {
+                           return item.includes('.html')
+                       })
+                       let indexHtml = item_sku.indexOf('.html')
+                       item_sku = item_sku.slice(0,indexHtml)
+                       console.log(item_sku)
+                       let checkEpacket = await checkEPacket(item_sku)
+                       console.log(checkEpacket)
+                       if(checkEpacket.result == true)
+                       {
+                           await getInfoProduct(item_sku,checkEpacket.price,multiplication)
+                       }
+                   }
+               }
+               let aNext = $('a.page-next.ui-pagination-next:eq(0)')
+               if(aNext != null)
+               {
+                   if($(aNext).attr('href') != undefined)
+                   {
+                       setTimeout(function () {
+                           searchProduct('https:'+$(aNext).attr('href'),multiplication,search)
+                       },30000)
+                   }
+               }
+               else{
+                   console.log('da het trang')
+               }
+           }
+       }).catch(err => {
+           console.log('Loi request')
+       })
+   }
+   else{
+       console.log("Da dung tien trinh")
+   }
 }
-
 
 async function checkTradeMark(textBrandName){
     let trademark = false
@@ -116,21 +172,55 @@ async function getDesc(url,brandName)
 
 
 async function checkEPacket(item_sku) {
-    let result = false
+    let result = {
+        result: false,
+        price : -1
+    }
     await axios.get(`https://freight.aliexpress.com/ajaxFreightCalculateService.htm?productid=${item_sku}&country=US&abVersion=1`).then(response => {
         let ships = JSON.parse(response.data.replace('(','').replace(')',''))
+
         if(ships.freight != undefined)
         {
+            let price = 50
             ships.freight.forEach(i => {
-                if(i.companyDisplayName == 'ePacket')
+                let maxDate = i.time.split('-')
+                if(maxDate.length > 1)
                 {
-                    result = true
+                    maxDate = maxDate[1]
+                    if(i.isTracked == true && parseInt(maxDate) < 40 && (i.localPrice < result.price || result.price == -1))
+                    {
+                        result.result = true
+                        result.price = i.localPrice
+                        result.commitDay = i.commitDay
+                    }
+                }
+
+            })
+        }
+        else{
+             result = {
+                result: false,
+                price : -1
+            }
+            ships.forEach(i => {
+                let maxDate = i.time.split('-')
+                if(maxDate.length > 1)
+                {
+                    maxDate = maxDate[1]
+                    if(i.isTracked == true && parseInt(maxDate) < 40 && (i.localPrice < result.price || result.price == -1))
+                    {
+                        result.result = true
+                        result.price = i.localPrice
+                        result.commitDay = i.commitDay
+                    }
                 }
             })
         }
+
     }).catch(err => {
         console.log(err)
     })
+    console.log(result)
     return result
 }
 
@@ -344,12 +434,12 @@ function getImage($){
 }
 
 
-async function getInfoProduct(item_sku){
+async function getInfoProduct(item_sku,price_ship,multiplication){
+    console.log('Dang lay thong tin sku: ',item_sku)
     let info = []
     await axios.get(`https://www.aliexpress.com/item/a/${item_sku}.html`).then(async response => {
         const { window } = new JSDOM(response.data);
         const $ = require('jquery')(window);
-
         const textSkuProducts = $('script:contains(skuProducts)').text()
         let index = textSkuProducts.indexOf('skuProducts')
         let context = textSkuProducts.slice(index)
@@ -400,7 +490,7 @@ async function getInfoProduct(item_sku){
 
 
 
-            let price_data  = helper.getPrice($,skuProducts)
+            let price_data  = helper.getPrice($,skuProducts,price_ship,multiplication)
 
             if(Object.keys(price_data).length === 0)
             {
@@ -411,7 +501,7 @@ async function getInfoProduct(item_sku){
 
 
 
-                let price = parseFloat($('#j-sku-discount-price').text()) + 15
+                let price = (parseInt($('#j-sku-discount-price').text()) + parseInt(price_ship)) * multiplication + 1.99
                 let product = {
                     item_sku:"",
                     item_name:"",
@@ -451,15 +541,11 @@ async function getInfoProduct(item_sku){
                 product.item_name = item_name
                 product.standard_price = price
                 products.push(product)
-                products.forEach(item => {
-                    console.log('khong bien the: ',item.item_sku)
-                })
-                putToServer(product)
+                putToServer(products)
             }
             else{
 
                 let product_child = getColors($,price_data,des,item_sku)
-
 
                 let product = {
                     item_sku:"",
@@ -497,9 +583,9 @@ async function getInfoProduct(item_sku){
                 product.product_description = des
                 product.item_sku = item_sku
                 product.item_name = item_name
-
+                product.parent_child = "Parent"
+                product.relationship_type = "Variation"
                 products.push(product)
-
                 if(product_child.length > 0)
                 {
                     product_child.forEach(item => {
@@ -535,20 +621,16 @@ async function getInfoProduct(item_sku){
                             size_map:"",
                         }
                         temp =  updateInfoProduct(temp,image_data)
-                        // console.log(specifics_bulletpoints)
                         temp = updateInfoProduct(temp,specifics_bulletpoints.bulletpoints)
                         temp.product_description = des
-                        temp.item_sku = item_sku
+                        temp.item_sku = item.item_sku
                         temp.item_name = item_name
                         temp.standard_price = item.standard_price
                         temp = updateInfoProduct(temp,item)
-                        putToServer(temp)
                         products.push(temp)
                     })
                 }
-                products.forEach(item => {
-                    console.log('Co bien the: ',item.item_sku)
-                })
+                putToServer(products)
             }
         }
         else{
@@ -571,11 +653,17 @@ function updateInfoProduct(product,info)
     })
     return product
 }
+
+
 function putToServer(data) {
-    axios.put('http://localhost:8000/api/product-aliexpress',data).then(data => {
-        console.log('thanh cong')
+    axios.put('http://localhost:8000/api/product-aliexpress',{
+        data:data
+    }).then(response => {
+        console.log(response.data)
     }).catch(err => {
-        console.log('Thất bại')
+        console.log(err)
     })
 }
+
+
 module.exports = router;
