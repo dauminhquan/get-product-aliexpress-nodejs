@@ -3,27 +3,39 @@ let router = express.Router();
 const jsdom = require("jsdom");
 const { JSDOM } = jsdom;
 const axios = require('axios')
+const fs = require('fs')
 const helper = require('../helpers/helper')
-var processSearch = {
-
-}
-/* GET home page. */
+const tokenSearch = '8ifOh3JKYCNg01I2K0PI'
+const tokenStop = 'vmWRXUKQA6xZZYTCdXsY'
+const tokenPage = 'N89B8uyqZd4c9icGslTe'
+const tokenPut = '4PyLWsy0jGGLpaON92fI'
+const tokenDone = 'n10JJg7XfBc4XWdbt9lw'
+const timeNextPage = 40000
 router.get('/', function(req, res, next) {
-    let item_sku = '32953605626'
-    axios.get(`https://www.aliexpress.com/item/a/${item_sku}.html`).then(response => {
-        return res.send(response.data)
-    }).catch(err => {
-        console.log(err)
-    })
-    // return res.json({
-    //     auth: "reject"
+    // let item_sku = '32953605626'
+    // axios.get(`https://www.aliexpress.com/item/a/${item_sku}.html`).then(response => {
+    //     return res.send(response.data)
+    // }).catch(err => {
+    //     console.log(err)
     // })
+    return res.json({
+        auth: "reject"
+    })
 });
 
 router.get('/stop-search',function (req,res) {
-    let query = req.query.query
-    query = query.replace(/%20/g,'+')
-    processSearch[query] = false
+    let token = req.query.token
+    if(token != tokenStop)
+    {
+        return false
+    }
+    let keyword_id = req.query.keyword_id
+    if(fs.existsSync(keyword_id+'.config'))
+    {
+        fs.unlinkSync(keyword_id+'.config')
+    }
+
+    console.log('da dung tien trinh thanh cong')
     return res.json({
         "message": "Dừng tiến trình thành công"
     })
@@ -40,95 +52,130 @@ router.get('/search',function(req,res,next){
         multiplication = 2.5
     }
     let page = req.query.page
-    if(page == undefined || parseInt(page) < 1)
+    let token = req.query.token
+    if(token != tokenSearch)
     {
-        page = 1
+        return false
     }
-    let url = `https://www.aliexpress.com/wholesale?isPremium=y&SearchText=${query}&page=${page}`
-    // axios.get(url).then(response => {
-    //     return res.send(response.data)
-    // })
-    searchProduct(url,multiplication,query)
+    let keyword_id = parseInt(req.query.keyword_id)
+    if(!isNaN(page))
+    {
+        let url = `https://www.aliexpress.com/wholesale?isPremium=y&SearchText=${query}&page=${page}`
+        if(req.query.start != undefined)
+        {
+            fs.writeFile(keyword_id+'.config', '0', function(err, data){
+                searchProduct(url,multiplication,query,keyword_id,page)
+            });
+
+        }
+
+    }
     return res.json({
         auth: "reject"
     })
 })
 
 
-
-async function searchProduct(url,multiplication,search)
+async function searchProduct(url,multiplication,search,keyword_id,page)
 {
-    console.log(url.split('&').find(item => {
-        return item.includes('page=')
-    }))
-    if(processSearch[search] ==  undefined)
+    if(page < 1)
     {
-        processSearch[search] = true
-        processSearch[search+'-block'] = 0
+        return false
     }
-   if(processSearch[search] == true && (processSearch[search+'-block'] < 2 || processSearch[search+'-block'] == undefined))
-   {
-       await axios.get(url).then(async response => {
-           const { window } = new JSDOM(response.data);
-           const $ = require('jquery')(window);
-           let products = $('.pic')
-           if(products.length == 0 || products.length == undefined)
-           {
-               processSearch[search+'-block']++
-               console.log('Đang bị block - Đang đợi 10 phút để tiếp tục')
-               console.log('Đợi 10 phút để tiếp tục')
-               setTimeout(function () {
-                   searchProduct(url,multiplication,search)
-               },600000)
+    axios.get('http://localhost:8000/keywords/'+keyword_id+'/page/'+page+'?token='+tokenPage).then(data => {
+        console.log('page: ',page)
+    }).catch(err => {
+        console.log('Khong the ket noi den server')
+    })
+    if(fs.existsSync(keyword_id+'.config')){
+        fs.readFile(keyword_id+'.config', async function(err, buf) {
+            let block = parseInt(buf.toString())
+            if(block > 2)
+            {
+                console.log('Khong the tim tu khoa')
+            }else{
+                await axios.get(url).then(async response => {
+                    const { window } = new JSDOM(response.data);
+                    const $ = require('jquery')(window);
+                    let products = $('.pic')
+                    if(products.length == 0 || products.length == undefined)
+                    {
+                        console.log('Dang bi chan - Vui long doi 10 phut')
+                        fs.writeFile(keyword_id+'.config', block+1, function(err, data){
+                            if(err)
+                            {
+                                console.log(err)
+                            }
+                            else{
+                                setTimeout(function () {
+                                    searchProduct(url,multiplication,search,keyword_id,parseInt(page) + 1)
+                                },600000)
 
+                            }
+                        })
+                    }
+                    else {
+                        for(let i = 0 ;i < products.length ; i++)
+                        {
+                            let url = $(products[i]).find('a.picRind:eq(0)')
+                            if(url.length > 0)
+                            {
+                                url = $(url).attr('href')
+                                url = url.split('/')
 
-           }
-           else {
-               for(let i = 0 ;i < products.length ; i++)
-               {
-                   let url = $(products[i]).find('a.picRind:eq(0)')
-                   if(url.length > 0)
-                   {
-                       url = $(url).attr('href')
-                       url = url.split('/')
+                                let item_sku = url.find(item => {
+                                    return item.includes('.html')
+                                })
+                                let indexHtml = item_sku.indexOf('.html')
+                                item_sku = item_sku.slice(0,indexHtml)
 
-                       let item_sku = url.find(item => {
-                           return item.includes('.html')
-                       })
-                       let indexHtml = item_sku.indexOf('.html')
-                       item_sku = item_sku.slice(0,indexHtml)
+                                let checkEpacket = await checkEPacket(item_sku)
 
-                       let checkEpacket = await checkEPacket(item_sku)
+                                if(checkEpacket.result == true)
+                                {
+                                    await getInfoProduct(item_sku,checkEpacket.price,multiplication,keyword_id,search)
+                                }
+                            }
+                        }
+                        let aNext = $('a.page-next.ui-pagination-next:eq(0)')
+                        if(aNext != null)
+                        {
+                            if($(aNext).attr('href') != undefined)
+                            {
+                                setTimeout(function () {
+                                    searchProduct('https:'+$(aNext).attr('href'),multiplication,search,keyword_id,parseInt(page) + 1)
+                                },timeNextPage)
+                            }
+                            else{
+                                axios.get('http://localhost:8000/keywords/done/'+keyword_id+'?token='+tokenDone).then(response => {
+                                    console.log('da het trang')
+                                }).catch(err => {
+                                    console.log('Co loi request den server')
+                                })
+                                if(fs.existsSync(keyword_id+'.config'))
+                                {
+                                    fs.unlinkSync(keyword_id+'.config')
+                                }
+                            }
+                        }
+                        else{
+                            axios.get('http://localhost:8000/keywords/done/'+keyword_id+'?token='+tokenDone).then(response => {
+                                console.log('da het trang')
+                            }).catch(err => {
+                                console.log('Co loi request den server')
+                            })
+                        }
+                    }
+                }).catch(err => {
+                    console.log('Loi request')
+                })
+            }
 
-                       if(checkEpacket.result == true)
-                       {
-                           await getInfoProduct(item_sku,checkEpacket.price,multiplication)
-                       }
-                   }
-               }
-               let aNext = $('a.page-next.ui-pagination-next:eq(0)')
-               if(aNext != null)
-               {
-                   if($(aNext).attr('href') != undefined)
-                   {
-                       setTimeout(function () {
-                           searchProduct('https:'+$(aNext).attr('href'),multiplication,search)
-                       },30000)
-                   }
-               }
-               else{
-                   console.log('da het trang')
-               }
-           }
-       }).catch(err => {
-           console.log('Loi request')
-       })
-   }
-   else{
-       delete  processSearch[search]
-       delete  processSearch[search+'-block']
-       console.log("Da dung tien trinh")
-   }
+        });
+    }
+    else{
+        console.log('Tien trinh da bi dung')
+    }
 }
 
 async function checkTradeMark(textBrandName){
@@ -437,210 +484,229 @@ function getImage($){
     return data
 }
 
-
-async function getInfoProduct(item_sku,price_ship,multiplication){
-    console.log('Dang lay thong tin sku: ',item_sku)
-    let info = []
-    await axios.get(`https://www.aliexpress.com/item/a/${item_sku}.html`).then(async response => {
-        const { window } = new JSDOM(response.data);
-        const $ = require('jquery')(window);
-        const textSkuProducts = $('script:contains(skuProducts)').text()
-        let index = textSkuProducts.indexOf('skuProducts')
-        let context = textSkuProducts.slice(index)
-        index = context.indexOf('];')
-        context = context.slice(0,index)
-        context+=']'
-        context = context.replace('skuProducts=','')
-        let skuProducts = JSON.parse(context)
-        let textDetailDesc = $('script:contains(window.runParams.detailDesc)').text()
-        index = textDetailDesc.indexOf('window.runParams.detailDesc')
-        context = textDetailDesc.slice(index)
-        context = context.replace('window.runParams.detailDesc="','')
-        index = context.indexOf('"')
-        context = context.slice(0,index)
-
-
-
-
-
-        let urlGetDes = context
-        //check thuong hieu
-        let branchName =  $('.product-property-list:eq(0)').find('li:contains(Brand Name)')
-        if(branchName.length > 0)
-        {
-            branchName = branchName[0]
-        }
-        var brandName = $(branchName).find('span:eq(1)').text()
-        let tradeMark = await checkTradeMark(brandName)
-
-
-        let item_name = $('h1.product-name')[0].innerHTML.replace(new RegExp(branchName,'i'),'')
-
-        // console.log(item_name)
-
-        if(tradeMark == false)
-        {
-
-            //get mo ta san pham
-            let image_data = getImage($)
-
-            let des = await getDesc(urlGetDes,brandName)
-            let specifics_bulletpoints = getSpecifics($)
-            if(des.length+specifics_bulletpoints.specifics.length < 2000)
-            {
-                des +=specifics_bulletpoints.specifics
-            }
-            let products = []
-
-
-
-            let price_data  = helper.getPrice($,skuProducts,price_ship,multiplication)
-
-            if(Object.keys(price_data).length === 0)
-            {
-                // khong co bien the
-
-                let price = (parseInt($('#j-sku-discount-price').text()) + parseInt(price_ship)) * multiplication + 1.99
-                let product = {
-                    item_sku:"",
-                    item_name:"",
-                    standard_price:"",
-                    main_image_url:"",
-                    swatch_image_url:"",
-                    other_image_url1:"",
-                    other_image_url2:"",
-                    other_image_url3:"",
-                    other_image_url4:"",
-                    other_image_url5:"",
-                    other_image_url6:"",
-                    other_image_url7:"",
-                    other_image_url8:"",
-                    other_image_url9:"",
-                    other_image_url10:"",
-                    parent_child:"",
-                    relationship_type:"",
-                    parent_sku:"",
-                    variation_theme:"",
-                    product_description:"",
-                    bullet_point1:"",
-                    bullet_point2:"",
-                    bullet_point3:"",
-                    bullet_point4:"",
-                    bullet_point5:"",
-                    color_name:"",
-                    color_map:"",
-                    size_name:"",
-                    size_map:"",
-                }
-
-                product = updateInfoProduct(product,image_data)
-                product = updateInfoProduct(product,specifics_bulletpoints.bulletpoints)
-                product.product_description = des
-                product.item_sku = item_sku
-                product.item_name = item_name
-                product.standard_price = price
-                products.push(product)
-                putToServer(products)
+async function getInfoProduct(item_sku,price_ship,multiplication,keyword_id){
+    if(fs.existsSync(keyword_id+'.config')){
+        await fs.readFile(keyword_id+'.config', async function(err, buf) {
+            let block = parseInt(buf.toString())
+            if (block > 2) {
+                console.log('Khong the lay thong tin san pham')
             }
             else{
+                console.log('Dang lay thong tin san pham: ',item_sku)
+                let info = []
+                await axios.get(`https://www.aliexpress.com/item/a/${item_sku}.html`).then(async response => {
+                    const { window } = new JSDOM(response.data);
+                    const $ = require('jquery')(window);
+                    const textSkuProducts = $('script:contains(skuProducts)').text()
+                    let index = textSkuProducts.indexOf('skuProducts')
+                    let context = textSkuProducts.slice(index)
+                    index = context.indexOf('];')
+                    context = context.slice(0,index)
+                    context+=']'
+                    context = context.replace('skuProducts=','')
+                    let skuProducts = JSON.parse(context)
+                    let textDetailDesc = $('script:contains(window.runParams.detailDesc)').text()
+                    index = textDetailDesc.indexOf('window.runParams.detailDesc')
+                    context = textDetailDesc.slice(index)
+                    context = context.replace('window.runParams.detailDesc="','')
+                    index = context.indexOf('"')
+                    context = context.slice(0,index)
 
-                let product_child = getColors($,price_data,des,item_sku)
 
-                let product = {
-                    item_sku:"",
-                    item_name:"",
-                    standard_price:"",
-                    main_image_url:"",
-                    swatch_image_url:"",
-                    other_image_url1:"",
-                    other_image_url2:"",
-                    other_image_url3:"",
-                    other_image_url4:"",
-                    other_image_url5:"",
-                    other_image_url6:"",
-                    other_image_url7:"",
-                    other_image_url8:"",
-                    other_image_url9:"",
-                    other_image_url10:"",
-                    parent_child:"",
-                    relationship_type:"",
-                    parent_sku:"",
-                    variation_theme:"",
-                    product_description:"",
-                    bullet_point1:"",
-                    bullet_point2:"",
-                    bullet_point3:"",
-                    bullet_point4:"",
-                    bullet_point5:"",
-                    color_name:"",
-                    color_map:"",
-                    size_name:"",
-                    size_map:"",
-                }
-                product = updateInfoProduct(product,image_data)
-                product =  updateInfoProduct(product,specifics_bulletpoints.bulletpoints)
-                product.product_description = des
-                product.item_sku = item_sku
-                product.item_name = item_name
-                product.parent_child = "Parent"
-                product.relationship_type = "Variation"
-                products.push(product)
-                if(product_child.length > 0)
-                {
-                    product_child.forEach(item => {
-                        let temp = {
-                            item_sku:"",
-                            item_name:"",
-                            standard_price:"",
-                            main_image_url:"",
-                            swatch_image_url:"",
-                            other_image_url1:"",
-                            other_image_url2:"",
-                            other_image_url3:"",
-                            other_image_url4:"",
-                            other_image_url5:"",
-                            other_image_url6:"",
-                            other_image_url7:"",
-                            other_image_url8:"",
-                            other_image_url9:"",
-                            other_image_url10:"",
-                            parent_child:"",
-                            relationship_type:"",
-                            parent_sku:"",
-                            variation_theme:"",
-                            product_description:"",
-                            bullet_point1:"",
-                            bullet_point2:"",
-                            bullet_point3:"",
-                            bullet_point4:"",
-                            bullet_point5:"",
-                            color_name:"",
-                            color_map:"",
-                            size_name:"",
-                            size_map:"",
+
+
+
+                    let urlGetDes = context
+                    //check thuong hieu
+                    let branchName =  $('.product-property-list:eq(0)').find('li:contains(Brand Name)')
+                    if(branchName.length > 0)
+                    {
+                        branchName = branchName[0]
+                    }
+                    var brandName = $(branchName).find('span:eq(1)').text()
+                    let tradeMark = await checkTradeMark(brandName)
+
+
+                    let item_name = $('h1.product-name')[0].innerHTML.replace(new RegExp(branchName,'i'),'')
+
+                    // console.log(item_name)
+
+                    if(tradeMark == false)
+                    {
+
+                        //get mo ta san pham
+                        let image_data = getImage($)
+
+                        let des = await getDesc(urlGetDes,brandName)
+                        let specifics_bulletpoints = getSpecifics($)
+                        if(des.length+specifics_bulletpoints.specifics.length < 2000)
+                        {
+                            des +=specifics_bulletpoints.specifics
                         }
-                        temp =  updateInfoProduct(temp,image_data)
-                        temp = updateInfoProduct(temp,specifics_bulletpoints.bulletpoints)
-                        temp.product_description = des
-                        temp.item_sku = item.item_sku
-                        temp.item_name = item_name
-                        temp.standard_price = item.standard_price
-                        temp = updateInfoProduct(temp,item)
-                        products.push(temp)
-                    })
-                }
-                putToServer(products)
-            }
-        }
-        else{
-            console.log('co bi ban quyen')
-        }
-        //check thuong hieu
+                        let products = []
 
-        // gia san pham
-    }).catch(err => {
-        console.log('loi lay thong tin san pham')
-    })
+
+
+                        let price_data  = helper.getPrice($,skuProducts,price_ship,multiplication)
+
+                        if(Object.keys(price_data).length === 0)
+                        {
+                            // khong co bien the
+
+                            let price = (parseInt($('#j-sku-discount-price').text()) + parseInt(price_ship)) * multiplication + 1.99
+                            let product = {
+                                item_sku:"",
+                                item_name:"",
+                                standard_price:"",
+                                main_image_url:"",
+                                swatch_image_url:"",
+                                other_image_url1:"",
+                                other_image_url2:"",
+                                other_image_url3:"",
+                                other_image_url4:"",
+                                other_image_url5:"",
+                                other_image_url6:"",
+                                other_image_url7:"",
+                                other_image_url8:"",
+                                other_image_url9:"",
+                                other_image_url10:"",
+                                parent_child:"",
+                                relationship_type:"",
+                                parent_sku:"",
+                                variation_theme:"",
+                                product_description:"",
+                                bullet_point1:"",
+                                bullet_point2:"",
+                                bullet_point3:"",
+                                bullet_point4:"",
+                                bullet_point5:"",
+                                color_name:"",
+                                color_map:"",
+                                size_name:"",
+                                size_map:"",
+                                keyword_id: keyword_id
+                            }
+
+                            product = updateInfoProduct(product,image_data)
+                            product = updateInfoProduct(product,specifics_bulletpoints.bulletpoints)
+                            product.product_description = des
+                            product.item_sku = item_sku
+                            product.item_name = item_name
+                            product.standard_price = price
+                            products.push(product)
+                            putToServer(products)
+                        }
+                        else{
+
+                            let product_child = getColors($,price_data,des,item_sku)
+
+                            let product = {
+                                item_sku:"",
+                                item_name:"",
+                                standard_price:"",
+                                main_image_url:"",
+                                swatch_image_url:"",
+                                other_image_url1:"",
+                                other_image_url2:"",
+                                other_image_url3:"",
+                                other_image_url4:"",
+                                other_image_url5:"",
+                                other_image_url6:"",
+                                other_image_url7:"",
+                                other_image_url8:"",
+                                other_image_url9:"",
+                                other_image_url10:"",
+                                parent_child:"",
+                                relationship_type:"",
+                                parent_sku:"",
+                                variation_theme:"",
+                                product_description:"",
+                                bullet_point1:"",
+                                bullet_point2:"",
+                                bullet_point3:"",
+                                bullet_point4:"",
+                                bullet_point5:"",
+                                color_name:"",
+                                color_map:"",
+                                size_name:"",
+                                size_map:"",
+                                keyword_id: keyword_id
+                            }
+                            product = updateInfoProduct(product,image_data)
+                            product =  updateInfoProduct(product,specifics_bulletpoints.bulletpoints)
+                            product.product_description = des
+                            product.item_sku = item_sku
+                            product.item_name = item_name
+                            product.parent_child = "Parent"
+                            product.relationship_type = "Variation"
+                            products.push(product)
+                            if(product_child.length > 0)
+                            {
+                                product_child.forEach(item => {
+                                    let temp = {
+                                        item_sku:"",
+                                        item_name:"",
+                                        standard_price:"",
+                                        main_image_url:"",
+                                        swatch_image_url:"",
+                                        other_image_url1:"",
+                                        other_image_url2:"",
+                                        other_image_url3:"",
+                                        other_image_url4:"",
+                                        other_image_url5:"",
+                                        other_image_url6:"",
+                                        other_image_url7:"",
+                                        other_image_url8:"",
+                                        other_image_url9:"",
+                                        other_image_url10:"",
+                                        parent_child:"",
+                                        relationship_type:"",
+                                        parent_sku:"",
+                                        variation_theme:"",
+                                        product_description:"",
+                                        bullet_point1:"",
+                                        bullet_point2:"",
+                                        bullet_point3:"",
+                                        bullet_point4:"",
+                                        bullet_point5:"",
+                                        color_name:"",
+                                        color_map:"",
+                                        size_name:"",
+                                        size_map:"",
+                                        keyword_id: keyword_id
+                                    }
+                                    temp =  updateInfoProduct(temp,image_data)
+                                    temp = updateInfoProduct(temp,specifics_bulletpoints.bulletpoints)
+                                    temp.product_description = des
+                                    temp.item_sku = item.item_sku
+                                    temp.item_name = item_name
+                                    temp.standard_price = item.standard_price
+                                    temp = updateInfoProduct(temp,item)
+                                    products.push(temp)
+                                })
+                            }
+                            putToServer(products)
+                        }
+                    }
+                    else{
+                        // console.log('co bi ban quyen')
+                    }
+                    //check thuong hieu
+
+                    // gia san pham
+                }).catch(err => {
+                    console.log('loi lay thong tin san pham')
+                })
+            }
+        })
+
+    }
+    else{
+        console.log('Khong the lay thong tin san pham: ',item_sku)
+    }
+
+
+
 }
 
 function updateInfoProduct(product,info)
@@ -658,9 +724,10 @@ function updateInfoProduct(product,info)
 
 function putToServer(data) {
     axios.put('http://localhost:8000/api/product-aliexpress',{
-        data:data
+        data:data,
+        token: tokenPut
     }).then(response => {
-        console.log(response.data)
+        // console.log(response.data)
     }).catch(err => {
         console.log('Loi tu server')
     })
