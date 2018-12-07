@@ -13,6 +13,10 @@ const tokenDone = 'n10JJg7XfBc4XWdbt9lw'
 const timeNextPage = 50000
 const serverPHP = 'http://13.59.122.59'
 // const serverPHP = 'http://localhost:8000'
+
+const colorMap = ["Beige","Black","Blue","Bronze","Brown","Clear","Copper","Cream","Gold","Green","Grey","Metallic","Multi-colored","Orange","Pink","Purple","Red","Silver","White","Yellow"]
+const sizeMap = ["L","M","S","XL","XS","XXL","XXS"]
+
 router.get('/', function(req, res, next) {
     // let item_sku = '32953605626'
     // axios.get('https://www.aliexpress.com/wholesale?isPremium=y&SearchText=bundles+').then(response => {
@@ -193,6 +197,7 @@ async function checkTradeMark(textBrandName){
             trademark = true
         }
     }).catch(err => {
+        console.log(err)
         console.log('Loi check trademark')
     })
     return trademark;
@@ -229,7 +234,9 @@ async function getDesc(url,brandName)
 async function checkEPacket(item_sku) {
     let result = {
         result: false,
-        price : -1
+        price : -1,
+        max_date: 40,
+        min_date: 35
     }
     await axios.get(`https://freight.aliexpress.com/ajaxFreightCalculateService.htm?productid=${item_sku}&country=US&abVersion=1`).then(response => {
         let ships = JSON.parse(response.data.replace('(','').replace(')',''))
@@ -239,6 +246,7 @@ async function checkEPacket(item_sku) {
             let price = 50
             ships.freight.forEach(i => {
                 let maxDate = i.time.split('-')
+
                 if(maxDate.length > 1)
                 {
                     maxDate = maxDate[1]
@@ -262,7 +270,7 @@ async function checkEPacket(item_sku) {
                 if(maxDate.length > 1)
                 {
                     maxDate = maxDate[1]
-                    if(i.isTracked == true && parseInt(maxDate) < 40 && (i.localPrice < result.price || result.price == -1))
+                    if((i.isTracked == true && parseInt(maxDate) < 40 && (i.localPrice < result.price || result.price == -1)) || i.companyDisplayName == "ePacket")
                     {
                         result.result = true
                         result.price = i.localPrice
@@ -388,6 +396,48 @@ function getColors($,price,des,parent_sku,main_image_url){
                     keys.forEach(key => {
                         if(colors[i].color +','+sizes[j] == key)
                         {
+                            let color = colors[i].color
+
+                            color = color.toLowerCase()
+                            color = color.split(' ')
+                            let color_map = 'White'
+                            for(let i = 0 ; i< color.length ; i++)
+                            {
+                                if(colorMap.includes(color[i]))
+                                {
+                                    color_map = colorMap.find(item => {
+                                        return item == color[i]
+                                    })
+                                    break;
+                                }
+                            }
+                            let size_name = sizes[j]
+                            size_name=size_name.toLowerCase()
+
+                            let size_map = "L"
+
+                            size_name = size_name.split(' ')
+                            for(let i = 0 ; i< size_name.length ; i++)
+                            {
+                                if(sizeMap.includes(size_name[i]))
+                                {
+                                    size_map = sizeMap.find(item => {
+                                        return item == size_name[i]
+                                    })
+                                    break;
+                                }
+                            }
+
+                            let swatch_image_url = colors[i].image
+                            if(swatch_image_url.includes('.jpg'))
+                            {
+                                swatch_image_url = swatch_image_url+'_50x50.jpg'
+                            }
+                            else if(swatch_image_url.includes('.jpeg'))
+                            {
+                                swatch_image_url = swatch_image_url+'_50x50.jpeg'
+                            }
+
                             data.push({
                                 color_name: colors[i].color,
                                 size_name: sizes[j],
@@ -399,7 +449,9 @@ function getColors($,price,des,parent_sku,main_image_url){
                                 variation_theme: 'SizeNameColorName',
                                 parent_sku: parent_sku,
                                 item_sku: parent_sku+'-cl'+(i+1)+'-size'+(j + 1),
-                                swatch_image_url: colors[i].image+'_50x50.jpg'
+                                swatch_image_url: swatch_image_url,
+                                color_map: color_map,
+                                size_map: size_map
                             })
                         }
                     })
@@ -418,7 +470,21 @@ function getColors($,price,des,parent_sku,main_image_url){
                 {
                     if(colors[i].color == keys[j])
                     {
+                        let color = colors[i].color
 
+                        color = color.toLowerCase()
+                        color = color.split(' ')
+                        let color_map = 'White'
+                        for(let i = 0 ; i< color.length ; i++)
+                        {
+                            if(colorMap.includes(color[i]))
+                            {
+                                color_map = colorMap.find(item => {
+                                    return item == color[i]
+                                })
+                                break;
+                            }
+                        }
                         data.push({
                             color_name: colors[i].color,
                             main_image_url: colors[i].image,
@@ -429,7 +495,8 @@ function getColors($,price,des,parent_sku,main_image_url){
                             variation_theme: 'ColorName',
                             parent_sku: parent_sku,
                             item_sku: parent_sku+'-cl'+(i+1),
-                            swatch_image_url: colors[i].image+'_50x50.jpg'
+                            swatch_image_url: colors[i].image+'_50x50.jpg',
+                            color_map: color_map
                         })
                         break;
                     }
@@ -446,6 +513,22 @@ function getColors($,price,des,parent_sku,main_image_url){
             keys.forEach(key => {
                 if(sizes[j] == key)
                 {
+                    let size_name = sizes[j]
+                    size_name=size_name.toLowerCase()
+
+                    let size_map = "L"
+
+                    size_name = size_name.split(' ')
+                    for(let i = 0 ; i< size_name.length ; i++)
+                    {
+                        if(sizeMap.includes(size_name[i]))
+                        {
+                            size_map = sizeMap.find(item => {
+                                return item == size_name[i]
+                            })
+                            break;
+                        }
+                    }
                     data.push({
                         size_name: sizes[j],
                         standard_price: price[key],
@@ -455,7 +538,8 @@ function getColors($,price,des,parent_sku,main_image_url){
                         variation_theme: 'SizeName',
                         parent_sku: parent_sku,
                         item_sku: parent_sku+'-size'+(j+1),
-                        main_image_url: main_image_url
+                        main_image_url: main_image_url,
+                        size_map: size_map
                     })
                 }
             })
@@ -481,6 +565,7 @@ function getImage($){
             data['main_image_url'] = main_image
         }else{
             other_images = ($(imagesProduct[i]).attr('src')).replace('_50x50.jpg','')
+            other_images = other_images.replace('_50x50.jpeg','')
             data['other_image_url'+(i)] = other_images
         }
     }
@@ -542,7 +627,7 @@ async function getInfoProduct(item_sku,price_ship,multiplication,keyword_id){
 
                         let des = await getDesc(urlGetDes,brandName)
                         let specifics_bulletpoints = getSpecifics($)
-                        if(des.length+specifics_bulletpoints.specifics.length < 2000)
+                        if((des.toString().length+specifics_bulletpoints.specifics.toString().length) < 2000)
                         {
                             des +=specifics_bulletpoints.specifics
                         }
@@ -641,7 +726,8 @@ async function getInfoProduct(item_sku,price_ship,multiplication,keyword_id){
                             product.item_sku = item_sku
                             product.item_name = item_name
                             product.parent_child = "Parent"
-                            product.relationship_type = "Variation"
+                            product.relationship_type = ""
+                            product.variation_theme = ""
                             products.push(product)
                             if(product_child.length > 0)
                             {
@@ -734,6 +820,5 @@ function putToServer(data) {
         console.log('Loi tu server')
     })
 }
-
 
 module.exports = router;
