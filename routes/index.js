@@ -10,7 +10,7 @@ const tokenStop = 'vmWRXUKQA6xZZYTCdXsY'
 const tokenPage = 'N89B8uyqZd4c9icGslTe'
 const tokenPut = '4PyLWsy0jGGLpaON92fI'
 const tokenDone = 'n10JJg7XfBc4XWdbt9lw'
-const timeNextPage = 40000
+const timeNextPage = 50000
 const serverPHP = 'http://13.59.122.59'
 // const serverPHP = 'http://localhost:8000'
 router.get('/', function(req, res, next) {
