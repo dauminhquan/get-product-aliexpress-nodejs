@@ -87,6 +87,7 @@ async function searchProduct(url,multiplication,search,keyword_id,page)
     axios.get(serverPHP+'/keywords/'+keyword_id+'/page/'+page+'?token='+tokenPage).then(data => {
         console.log('page: ',page)
     }).catch(err => {
+        console.log(err)
         console.log('Khong the ket noi den server')
     })
     if(fs.existsSync(keyword_id+'.config')){
