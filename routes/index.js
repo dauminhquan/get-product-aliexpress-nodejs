@@ -10,9 +10,9 @@ const tokenStop = 'vmWRXUKQA6xZZYTCdXsY'
 const tokenPage = 'N89B8uyqZd4c9icGslTe'
 const tokenPut = '4PyLWsy0jGGLpaON92fI'
 const tokenDone = 'n10JJg7XfBc4XWdbt9lw'
-const timeNextPage = 50000
-const serverPHP = 'http://13.59.122.59'
-// const serverPHP = 'http://localhost:8000'
+const timeNextPage = 60000
+// const serverPHP = 'http://13.59.122.59'
+const serverPHP = 'http://localhost:8000'
 
 const colorMap = ["Beige","Black","Blue","Bronze","Brown","Clear","Copper","Cream","Gold","Green","Grey","Metallic","Multi-colored","Orange","Pink","Purple","Red","Silver","White","Yellow"]
 const sizeMap = ["L","M","S","XL","XS","XXL","XXS"]
@@ -187,8 +187,10 @@ async function searchProduct(url,multiplication,search,keyword_id,page)
 
 async function checkTradeMark(textBrandName){
     let trademark = false
+    textBrandName = textBrandName.replace(/ /g,'%20')
+    let url = 'https://www.trademarkia.com/trademarks-search.aspx?tn=' + textBrandName
     const $ = require('jquery')
-    await axios.get(`https://www.trademarkia.com/trademarks-search.aspx?tn=${textBrandName}`).then(response => {
+    await axios.get(url).then(response => {
         const { window } = new JSDOM(response.data);
         const $ = require('jquery')(window);
         let bodyTable = $(".table.tablesaw.tablesaw-stack").find("tbody")
@@ -197,8 +199,8 @@ async function checkTradeMark(textBrandName){
             trademark = true
         }
     }).catch(err => {
-        console.log(err)
-        console.log('Loi check trademark')
+        console.log(url)
+        console.log(textBrandName,'Loi check trademark')
     })
     return trademark;
 }
@@ -362,6 +364,7 @@ function getColors($,price,des,parent_sku,main_image_url){
             if(src != undefined)
             {
                 let image = src.replace('_50x50.jpg','')
+                image = src.replace('_50x50.jpeg','')
                 colors.push({
                     color: color,
                     image: image
@@ -437,11 +440,13 @@ function getColors($,price,des,parent_sku,main_image_url){
                             {
                                 swatch_image_url = swatch_image_url+'_50x50.jpeg'
                             }
-
+                            let main_image_url = colors[i].image
+                            main_image_url = main_image_url.replace('_50x50.jpg','')
+                            main_image_url = main_image_url.replace('_50x50.jpeg','')
                             data.push({
                                 color_name: colors[i].color,
                                 size_name: sizes[j],
-                                main_image_url: colors[i].image,
+                                main_image_url: main_image_url,
                                 standard_price: price[key],
                                 product_description: des,
                                 parent_child: 'Child',
@@ -485,9 +490,12 @@ function getColors($,price,des,parent_sku,main_image_url){
                                 break;
                             }
                         }
+                        let main_image_url = colors[i].image
+                        main_image_url = main_image_url.replace('_50x50.jpg','')
+                        main_image_url = main_image_url.replace('_50x50.jpeg','')
                         data.push({
                             color_name: colors[i].color,
-                            main_image_url: colors[i].image,
+                            main_image_url: main_image_url,
                             standard_price: price[keys[j]],
                             product_description: des,
                             parent_child: 'Child',
@@ -529,6 +537,8 @@ function getColors($,price,des,parent_sku,main_image_url){
                             break;
                         }
                     }
+                    main_image_url = main_image_url.replace('_50x50.jpg','')
+                    main_image_url = main_image_url.replace('_50x50.jpeg','')
                     data.push({
                         size_name: sizes[j],
                         standard_price: price[key],
