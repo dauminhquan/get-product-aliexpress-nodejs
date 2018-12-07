@@ -11,6 +11,7 @@ const tokenPage = 'N89B8uyqZd4c9icGslTe'
 const tokenPut = '4PyLWsy0jGGLpaON92fI'
 const tokenDone = 'n10JJg7XfBc4XWdbt9lw'
 const timeNextPage = 40000
+const serverPHP = 'http://13.59.122.59'
 router.get('/', function(req, res, next) {
     // let item_sku = '32953605626'
     // axios.get(`https://www.aliexpress.com/item/a/${item_sku}.html`).then(response => {
@@ -721,9 +722,8 @@ function updateInfoProduct(product,info)
     return product
 }
 
-
 function putToServer(data) {
-    axios.put('http://localhost:8000/api/product-aliexpress',{
+    axios.put(serverPHP+'/api/product-aliexpress',{
         data:data,
         token: tokenPut
     }).then(response => {
