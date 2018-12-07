@@ -15,7 +15,7 @@ const serverPHP = 'http://13.59.122.59'
 // const serverPHP = 'http://localhost:8000'
 router.get('/', function(req, res, next) {
     let item_sku = '32953605626'
-    axios.get(`https://www.aliexpress.com/item/a/${item_sku}.html`).then(response => {
+    axios.get('https://www.aliexpress.com/wholesale?isPremium=y&SearchText=bundles+').then(response => {
         return res.send(response.data)
     }).catch(err => {
         console.log(err)
