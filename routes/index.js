@@ -83,7 +83,7 @@ async function searchProduct(url,multiplication,search,keyword_id,page)
     {
         return false
     }
-    axios.get('http://localhost:8000/keywords/'+keyword_id+'/page/'+page+'?token='+tokenPage).then(data => {
+    axios.get(serverPHP+'/keywords/'+keyword_id+'/page/'+page+'?token='+tokenPage).then(data => {
         console.log('page: ',page)
     }).catch(err => {
         console.log('Khong the ket noi den server')
