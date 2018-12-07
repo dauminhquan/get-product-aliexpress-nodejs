@@ -12,16 +12,17 @@ const tokenPut = '4PyLWsy0jGGLpaON92fI'
 const tokenDone = 'n10JJg7XfBc4XWdbt9lw'
 const timeNextPage = 40000
 const serverPHP = 'http://13.59.122.59'
+// const serverPHP = 'http://localhost:8000'
 router.get('/', function(req, res, next) {
-    // let item_sku = '32953605626'
-    // axios.get(`https://www.aliexpress.com/item/a/${item_sku}.html`).then(response => {
-    //     return res.send(response.data)
-    // }).catch(err => {
-    //     console.log(err)
-    // })
-    return res.json({
-        auth: "reject"
+    let item_sku = '32953605626'
+    axios.get(`https://www.aliexpress.com/item/a/${item_sku}.html`).then(response => {
+        return res.send(response.data)
+    }).catch(err => {
+        console.log(err)
     })
+    // return res.json({
+    //     auth: "reject"
+    // })
 });
 
 router.get('/stop-search',function (req,res) {
