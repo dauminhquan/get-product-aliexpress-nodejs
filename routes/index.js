@@ -195,6 +195,7 @@ async function searchProduct(url,multiplication,search,keyword_id,page)
                         }
                     }
                 }).catch(err => {
+                	console.log(err)
                     console.log('Loi request')
                 })
             }
