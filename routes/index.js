@@ -71,6 +71,10 @@ router.get('/search',function(req,res,next){
     if(!isNaN(page))
     {
         let url = `https://www.aliexpress.com/wholesale?isPremium=y&SearchText=${query}&page=${page}`
+        if(req.query.url != undefined && req.query.url != "")
+        {
+            url = req.query.url
+        }
         if(req.query.start != undefined)
         {
             let searchKeyword = new SearchKeyword({
@@ -148,7 +152,7 @@ async function searchProduct(url,multiplication,search,keyword_id,page)
                             {
                                 url = $(url).attr('href')
                                 url = url.split('/')
-                               
+
                                 let item_sku = url.find(item => {
                                     return item.includes('.html')
                                 })
