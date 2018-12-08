@@ -10,7 +10,7 @@ const indexRouter = require('./routes/index');
 //
 // sockets.init(server);
 modules.init(app);
-// db.init(config);
+db.init(config);
 const io  = require('socket.io')(server)
 io.on('connection', function(socket) {
     console.log('connected socket!');

@@ -11,8 +11,9 @@ const tokenPage = 'N89B8uyqZd4c9icGslTe'
 const tokenPut = '4PyLWsy0jGGLpaON92fI'
 const tokenDone = 'n10JJg7XfBc4XWdbt9lw'
 const timeNextPage = 60000
-// const serverPHP = 'http://13.59.122.59'
-const serverPHP = 'http://localhost:8000'
+const serverPHP = 'http://13.59.122.59'
+// const serverPHP = 'http://localhost:8000'
+const SearchKeyword = require('./../model/searches')
 
 const colorMap = ["Beige","Black","Blue","Bronze","Brown","Clear","Copper","Cream","Gold","Green","Grey","Metallic","Multi-colored","Orange","Pink","Purple","Red","Silver","White","Yellow"]
 const sizeMap = ["L","M","S","XL","XS","XXL","XXS"]
@@ -36,14 +37,17 @@ router.get('/stop-search',function (req,res) {
         return false
     }
     let keyword_id = req.query.keyword_id
-    if(fs.existsSync(keyword_id+'.config'))
-    {
-        fs.unlinkSync(keyword_id+'.config')
-    }
-
-    console.log('da dung tien trinh thanh cong')
-    return res.json({
-        "message": "Dừng tiến trình thành công"
+    SearchKeyword.deleteOne({id: keyword_id},function(err){
+        if(err)
+        {
+            return res.status(500).json(err)
+        }
+        else{
+            console.log('da dung tien trinh thanh cong')
+            return res.json({
+                "message": "Dừng tiến trình thành công"
+            })
+        }
     })
 })
 
@@ -69,9 +73,20 @@ router.get('/search',function(req,res,next){
         let url = `https://www.aliexpress.com/wholesale?isPremium=y&SearchText=${query}&page=${page}`
         if(req.query.start != undefined)
         {
-            fs.writeFile(keyword_id+'.config', '0', function(err, data){
-                searchProduct(url,multiplication,query,keyword_id,page)
-            });
+            let searchKeyword = new SearchKeyword({
+                id : keyword_id,
+                block: 0
+            })
+            searchKeyword.save(function (err) {
+                if(err)
+                {
+                    console.log(err)
+                    return res.status(500).json(err)
+                }
+                else{
+                    searchProduct(url,multiplication,query,keyword_id,page)
+                }
+            })
 
         }
 
@@ -88,19 +103,23 @@ async function searchProduct(url,multiplication,search,keyword_id,page)
     {
         return false
     }
-    axios.get(serverPHP+'/keywords/'+keyword_id+'/page/'+page+'?token='+tokenPage).then(data => {
-        console.log('page: ',page)
-    }).catch(err => {
-        console.log(err)
-        console.log('Khong the ket noi den server')
-    })
-    if(fs.existsSync(keyword_id+'.config')){
-        fs.readFile(keyword_id+'.config', async function(err, buf) {
-            let block = parseInt(buf.toString())
-            if(block > 2)
+    SearchKeyword.findOne({id: keyword_id},['id','block'], async function (err,keywordSearch) {
+        if(err || keywordSearch == null)
+        {
+            console.log('Co loi hoac tu khoa khong ton tai ')
+        }
+        else{
+            axios.get(serverPHP+'/keywords/'+keyword_id+'/page/'+page+'?token='+tokenPage).then(data => {
+                console.log('page: ',page)
+            }).catch(err => {
+                console.log(err)
+                console.log('Khong the ket noi den server')
+            })
+            if(keywordSearch.block > 2)
             {
-                console.log('Khong the tim tu khoa')
-            }else{
+                console.log('da bi chan qua 3 lan')
+            }
+            else{
                 await axios.get(url).then(async response => {
                     const { window } = new JSDOM(response.data);
                     const $ = require('jquery')(window);
@@ -116,7 +135,7 @@ async function searchProduct(url,multiplication,search,keyword_id,page)
                             else{
                                 setTimeout(function () {
                                     searchProduct(url,multiplication,search,keyword_id,parseInt(page) + 1)
-                                },600000)
+                                },timeNextPage)
 
                             }
                         })
@@ -154,19 +173,21 @@ async function searchProduct(url,multiplication,search,keyword_id,page)
                                 },timeNextPage)
                             }
                             else{
-                                axios.get('http://localhost:8000/keywords/done/'+keyword_id+'?token='+tokenDone).then(response => {
+                                axios.get(serverPHP+'/keywords/done/'+keyword_id+'?token='+tokenDone).then(response => {
                                     console.log('da het trang')
                                 }).catch(err => {
                                     console.log('Co loi request den server')
                                 })
-                                if(fs.existsSync(keyword_id+'.config'))
-                                {
-                                    fs.unlinkSync(keyword_id+'.config')
-                                }
+                                SearchKeyword.deleteOne({id : keyword_id},function (err) {
+                                    if(err)
+                                    {
+                                        console.log(err+ '---dong 185')
+                                    }
+                                })
                             }
                         }
                         else{
-                            axios.get('http://localhost:8000/keywords/done/'+keyword_id+'?token='+tokenDone).then(response => {
+                            axios.get(serverPHP+'/keywords/done/'+keyword_id+'?token='+tokenDone).then(response => {
                                 console.log('da het trang')
                             }).catch(err => {
                                 console.log('Co loi request den server')
@@ -178,11 +199,8 @@ async function searchProduct(url,multiplication,search,keyword_id,page)
                 })
             }
 
-        });
-    }
-    else{
-        console.log('Tien trinh da bi dung')
-    }
+        }
+    })
 }
 
 async function checkTradeMark(textBrandName){
@@ -583,121 +601,122 @@ function getImage($){
 }
 
 async function getInfoProduct(item_sku,price_ship,multiplication,keyword_id){
-    if(fs.existsSync(keyword_id+'.config')){
-        await fs.readFile(keyword_id+'.config', async function(err, buf) {
-            let block = parseInt(buf.toString())
-            if (block > 2) {
-                console.log('Khong the lay thong tin san pham')
-            }
-            else{
-                console.log('Dang lay thong tin san pham: ',item_sku)
-                let info = []
-                await axios.get(`https://www.aliexpress.com/item/a/${item_sku}.html`).then(async response => {
-                    const { window } = new JSDOM(response.data);
-                    const $ = require('jquery')(window);
-                    const textSkuProducts = $('script:contains(skuProducts)').text()
-                    let index = textSkuProducts.indexOf('skuProducts')
-                    let context = textSkuProducts.slice(index)
-                    index = context.indexOf('];')
-                    context = context.slice(0,index)
-                    context+=']'
-                    context = context.replace('skuProducts=','')
-                    let skuProducts = JSON.parse(context)
-                    let textDetailDesc = $('script:contains(window.runParams.detailDesc)').text()
-                    index = textDetailDesc.indexOf('window.runParams.detailDesc')
-                    context = textDetailDesc.slice(index)
-                    context = context.replace('window.runParams.detailDesc="','')
-                    index = context.indexOf('"')
-                    context = context.slice(0,index)
+
+    SearchKeyword.findOne({id : keyword_id},['id','block'], async function (err,doc) {
+        if(err || doc == null)
+        {
+            console.log('Co loi xay ra hoac tu khoa khong ton tai')
+        }
+        else{
+            console.log('Dang lay thong tin san pham: ',item_sku)
+            let info = []
+            await axios.get(`https://www.aliexpress.com/item/a/${item_sku}.html`).then(async response => {
+                const { window } = new JSDOM(response.data);
+                const $ = require('jquery')(window);
+                const textSkuProducts = $('script:contains(skuProducts)').text()
+                let index = textSkuProducts.indexOf('skuProducts')
+                let context = textSkuProducts.slice(index)
+                index = context.indexOf('];')
+                context = context.slice(0,index)
+                context+=']'
+                context = context.replace('skuProducts=','')
+                let skuProducts = JSON.parse(context)
+                let textDetailDesc = $('script:contains(window.runParams.detailDesc)').text()
+                index = textDetailDesc.indexOf('window.runParams.detailDesc')
+                context = textDetailDesc.slice(index)
+                context = context.replace('window.runParams.detailDesc="','')
+                index = context.indexOf('"')
+                context = context.slice(0,index)
 
 
 
 
 
-                    let urlGetDes = context
-                    //check thuong hieu
-                    let branchName =  $('.product-property-list:eq(0)').find('li:contains(Brand Name)')
-                    if(branchName.length > 0)
+                let urlGetDes = context
+                //check thuong hieu
+                let branchName =  $('.product-property-list:eq(0)').find('li:contains(Brand Name)')
+                if(branchName.length > 0)
+                {
+                    branchName = branchName[0]
+                }
+                var brandName = $(branchName).find('span:eq(1)').text()
+                let tradeMark = await checkTradeMark(brandName)
+
+
+                let item_name = $('h1.product-name')[0].innerHTML.replace(new RegExp(branchName,'i'),'')
+
+                // console.log(item_name)
+
+                if(tradeMark == false)
+                {
+
+                    //get mo ta san pham
+                    let image_data = getImage($)
+
+                    let des = await getDesc(urlGetDes,brandName)
+                    let specifics_bulletpoints = getSpecifics($)
+                    if((des.toString().length+specifics_bulletpoints.specifics.toString().length) < 2000)
                     {
-                        branchName = branchName[0]
+                        des +=specifics_bulletpoints.specifics
                     }
-                    var brandName = $(branchName).find('span:eq(1)').text()
-                    let tradeMark = await checkTradeMark(brandName)
+                    let products = []
 
 
-                    let item_name = $('h1.product-name')[0].innerHTML.replace(new RegExp(branchName,'i'),'')
 
-                    // console.log(item_name)
+                    let price_data  = helper.getPrice($,skuProducts,price_ship,multiplication)
 
-                    if(tradeMark == false)
+                    if(Object.keys(price_data).length === 0)
                     {
+                        // khong co bien the
 
-                        //get mo ta san pham
-                        let image_data = getImage($)
-
-                        let des = await getDesc(urlGetDes,brandName)
-                        let specifics_bulletpoints = getSpecifics($)
-                        if((des.toString().length+specifics_bulletpoints.specifics.toString().length) < 2000)
-                        {
-                            des +=specifics_bulletpoints.specifics
+                        let price = (parseInt($('#j-sku-discount-price').text()) + parseInt(price_ship)) * multiplication + 1.99
+                        let product = {
+                            item_sku:"",
+                            item_name:"",
+                            standard_price:"",
+                            main_image_url:"",
+                            swatch_image_url:"",
+                            other_image_url1:"",
+                            other_image_url2:"",
+                            other_image_url3:"",
+                            other_image_url4:"",
+                            other_image_url5:"",
+                            other_image_url6:"",
+                            other_image_url7:"",
+                            other_image_url8:"",
+                            other_image_url9:"",
+                            other_image_url10:"",
+                            parent_child:"",
+                            relationship_type:"",
+                            parent_sku:"",
+                            variation_theme:"",
+                            product_description:"",
+                            bullet_point1:"",
+                            bullet_point2:"",
+                            bullet_point3:"",
+                            bullet_point4:"",
+                            bullet_point5:"",
+                            color_name:"",
+                            color_map:"",
+                            size_name:"",
+                            size_map:"",
+                            keyword_id: keyword_id
                         }
-                        let products = []
 
+                        product = updateInfoProduct(product,image_data)
+                        product = updateInfoProduct(product,specifics_bulletpoints.bulletpoints)
+                        product.product_description = des
+                        product.item_sku = item_sku
+                        product.item_name = item_name
+                        product.standard_price = price
+                        products.push(product)
+                        putToServer(products)
+                    }
+                    else{
 
-
-                        let price_data  = helper.getPrice($,skuProducts,price_ship,multiplication)
-
-                        if(Object.keys(price_data).length === 0)
+                        let product_child = getColors($,price_data,des,item_sku)
+                        if(product_child.length > 0)
                         {
-                            // khong co bien the
-
-                            let price = (parseInt($('#j-sku-discount-price').text()) + parseInt(price_ship)) * multiplication + 1.99
-                            let product = {
-                                item_sku:"",
-                                item_name:"",
-                                standard_price:"",
-                                main_image_url:"",
-                                swatch_image_url:"",
-                                other_image_url1:"",
-                                other_image_url2:"",
-                                other_image_url3:"",
-                                other_image_url4:"",
-                                other_image_url5:"",
-                                other_image_url6:"",
-                                other_image_url7:"",
-                                other_image_url8:"",
-                                other_image_url9:"",
-                                other_image_url10:"",
-                                parent_child:"",
-                                relationship_type:"",
-                                parent_sku:"",
-                                variation_theme:"",
-                                product_description:"",
-                                bullet_point1:"",
-                                bullet_point2:"",
-                                bullet_point3:"",
-                                bullet_point4:"",
-                                bullet_point5:"",
-                                color_name:"",
-                                color_map:"",
-                                size_name:"",
-                                size_map:"",
-                                keyword_id: keyword_id
-                            }
-
-                            product = updateInfoProduct(product,image_data)
-                            product = updateInfoProduct(product,specifics_bulletpoints.bulletpoints)
-                            product.product_description = des
-                            product.item_sku = item_sku
-                            product.item_name = item_name
-                            product.standard_price = price
-                            products.push(product)
-                            putToServer(products)
-                        }
-                        else{
-
-                            let product_child = getColors($,price_data,des,item_sku)
-
                             let product = {
                                 item_sku:"",
                                 item_name:"",
@@ -737,7 +756,7 @@ async function getInfoProduct(item_sku,price_ship,multiplication,keyword_id){
                             product.item_name = item_name
                             product.parent_child = "Parent"
                             product.relationship_type = ""
-                            product.variation_theme = ""
+                            product.variation_theme = product_child[0].variation_theme == undefined ? "" :  product_child[0].variation_theme
                             products.push(product)
                             if(product_child.length > 0)
                             {
@@ -787,22 +806,21 @@ async function getInfoProduct(item_sku,price_ship,multiplication,keyword_id){
                             putToServer(products)
                         }
                     }
-                    else{
-                        // console.log('co bi ban quyen')
-                    }
-                    //check thuong hieu
+                }
+                else{
+                    // console.log('co bi ban quyen')
+                }
+                //check thuong hieu
 
-                    // gia san pham
-                }).catch(err => {
-                    console.log('loi lay thong tin san pham')
-                })
-            }
-        })
+                // gia san pham
+            }).catch(err => {
+                console.log(err)
+                console.log('loi lay thong tin san pham')
+            })
+        }
+    })
 
-    }
-    else{
-        console.log('Khong the lay thong tin san pham: ',item_sku)
-    }
+
 
 
 

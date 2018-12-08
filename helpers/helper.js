@@ -55,7 +55,7 @@ module.exports = {
             })
             if(getPriceData != undefined)
             {
-                price_text_data[item.text] = ((parseInt(getPriceData.skuVal.actSkuMultiCurrencyDisplayPrice == undefined ? getPriceData.skuVal.skuMultiCurrencyDisplayPrice : getPriceData.skuVal.actSkuMultiCurrencyDisplayPrice) + price_ship) * multiplication + 1.99).toString()
+                price_text_data[item.text] = ((parseInt(getPriceData.skuVal.actSkuMultiCurrencyDisplayPrice == undefined ? parseInt(getPriceData.skuVal.skuMultiCurrencyDisplayPrice) : parseInt(getPriceData.skuVal.actSkuMultiCurrencyDisplayPrice)) + price_ship) * multiplication + 1.99).toString()
             }
         })
         return price_text_data
