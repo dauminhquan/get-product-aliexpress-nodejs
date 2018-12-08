@@ -148,7 +148,7 @@ async function searchProduct(url,multiplication,search,keyword_id,page)
                             {
                                 url = $(url).attr('href')
                                 url = url.split('/')
-
+                                console.log(url)
                                 let item_sku = url.find(item => {
                                     return item.includes('.html')
                                 })
