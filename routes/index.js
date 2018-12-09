@@ -722,10 +722,7 @@ async function getInfoProduct(item_sku,price_ship,multiplication,keyword_id){
                         product.item_name = item_name
                         product.standard_price = price
                         products.push(product)
-                        products.forEach(item => {
-                            console.log(item.standard_price)
-                        })
-                        // putToServer(products)
+                        putToServer(products)
                     }
                     else{
 
@@ -818,10 +815,7 @@ async function getInfoProduct(item_sku,price_ship,multiplication,keyword_id){
                                     products.push(temp)
                                 })
                             }
-                            products.forEach(item => {
-                                console.log(item.standard_price)
-                            })
-                            // putToServer(products)
+                            putToServer(products)
                         }
                     }
                 }
