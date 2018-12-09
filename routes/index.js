@@ -18,8 +18,18 @@ const SearchKeyword = require('./../model/searches')
 const colorMap = ["Beige","Black","Blue","Bronze","Brown","Clear","Copper","Cream","Gold","Green","Grey","Metallic","Multi-colored","Orange","Pink","Purple","Red","Silver","White","Yellow"]
 const sizeMap = ["L","M","S","XL","XS","XXL","XXS"]
 
-router.get('/', function(req, res, next) {
-    // let item_sku = '32953605626'
+router.get('/',async function(req, res, next) {
+    // let item_sku = '32369488999'
+    //
+    // let checkEpacket = await checkEPacket(item_sku)
+    //
+    // if(checkEpacket.result == true)
+    // {
+    //     getInfoProduct(item_sku,checkEpacket.price,5,1,'a')
+    // }
+    //
+    // checkEPacket(item_sku);
+
     // axios.get('https://www.aliexpress.com/wholesale?isPremium=y&SearchText=bundles+').then(response => {
     //     return res.send(response.data)
     // }).catch(err => {
@@ -81,14 +91,14 @@ router.get('/search',function(req,res,next){
                 id : keyword_id,
                 block: 0
             })
-            searchKeyword.save(function (err) {
+            searchKeyword.save(async function (err) {
                 if(err)
                 {
                     console.log(err)
                     return res.status(500).json(err)
                 }
                 else{
-                    searchProduct(url,multiplication,query,keyword_id,page)
+                    await searchProduct(url,multiplication,query,keyword_id,page)
                 }
             })
 
@@ -131,20 +141,19 @@ async function searchProduct(url,multiplication,search,keyword_id,page)
                     if(products.length == 0 || products.length == undefined)
                     {
                         console.log('Dang bi chan - Vui long doi 10 phut')
-                        fs.writeFile(keyword_id+'.config', block+1, function(err, data){
+                        searchProduct.block++
+                        searchProduct.save(function(err){
                             if(err)
                             {
                                 console.log(err)
-                            }
-                            else{
-                                setTimeout(function () {
-                                    searchProduct(url,multiplication,search,keyword_id,parseInt(page) + 1)
+                            }else{
+                                setTimeout(async function () {
+                                    await searchProduct(url,multiplication,search,keyword_id,parseInt(page) + 1)
                                 },timeNextPage)
-
                             }
                         })
                     }
-                    else {
+                          else {
                         for(let i = 0 ;i < products.length ; i++)
                         {
                             let url = $(products[i]).find('a.picRind:eq(0)')
@@ -172,8 +181,8 @@ async function searchProduct(url,multiplication,search,keyword_id,page)
                         {
                             if($(aNext).attr('href') != undefined)
                             {
-                                setTimeout(function () {
-                                    searchProduct('https:'+$(aNext).attr('href'),multiplication,search,keyword_id,parseInt(page) + 1)
+                                setTimeout(async function () {
+                                   await searchProduct('https:'+$(aNext).attr('href'),multiplication,search,keyword_id,parseInt(page) + 1)
                                 },timeNextPage)
                             }
                             else{
@@ -644,12 +653,11 @@ async function getInfoProduct(item_sku,price_ship,multiplication,keyword_id){
                     branchName = branchName[0]
                 }
                 var brandName = $(branchName).find('span:eq(1)').text()
-                let tradeMark = await checkTradeMark(brandName)
 
+                let tradeMark = await checkTradeMark(encodeURI(brandName))
 
-                let item_name = $('h1.product-name')[0].innerHTML.replace(new RegExp(branchName,'i'),'')
+                let item_name = $('h1.product-name:eq(0)').text().replace(new RegExp(brandName,'i'),'')
 
-                // console.log(item_name)
 
                 if(tradeMark == false)
                 {
@@ -714,7 +722,10 @@ async function getInfoProduct(item_sku,price_ship,multiplication,keyword_id){
                         product.item_name = item_name
                         product.standard_price = price
                         products.push(product)
-                        putToServer(products)
+                        products.forEach(item => {
+                            console.log(item.standard_price)
+                        })
+                        // putToServer(products)
                     }
                     else{
 
@@ -807,7 +818,10 @@ async function getInfoProduct(item_sku,price_ship,multiplication,keyword_id){
                                     products.push(temp)
                                 })
                             }
-                            putToServer(products)
+                            products.forEach(item => {
+                                console.log(item.standard_price)
+                            })
+                            // putToServer(products)
                         }
                     }
                 }
@@ -823,11 +837,6 @@ async function getInfoProduct(item_sku,price_ship,multiplication,keyword_id){
             })
         }
     })
-
-
-
-
-
 }
 
 function updateInfoProduct(product,info)

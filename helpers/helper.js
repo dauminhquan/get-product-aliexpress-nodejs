@@ -34,7 +34,6 @@ module.exports = {
             }
             dlsData.push(itemData)
         }
-
         text = text.slice(1)
         let p = [];
 
@@ -47,7 +46,6 @@ module.exports = {
             price: p
         }
         let price_text_data = {}
-
         price_text.price.forEach(item => {
 
             let getPriceData = skuProducts.find(value => {
@@ -55,7 +53,7 @@ module.exports = {
             })
             if(getPriceData != undefined)
             {
-                price_text_data[item.text] = ((parseInt(getPriceData.skuVal.actSkuMultiCurrencyDisplayPrice == undefined ? parseInt(getPriceData.skuVal.skuMultiCurrencyDisplayPrice) : parseInt(getPriceData.skuVal.actSkuMultiCurrencyDisplayPrice)) + price_ship) * multiplication + 1.99).toString()
+                price_text_data[item.text] = getPriceData.skuVal.actSkuMultiCurrencyDisplayPrice == undefined ? ((parseInt(getPriceData.skuVal.skuMultiCurrencyDisplayPrice) + price_ship) * multiplication + 1.99) : (((parseInt(getPriceData.skuVal.actSkuMultiCurrencyDisplayPrice)) + parseInt(price_ship)) * multiplication + 1.99).toString()
             }
         })
         return price_text_data
