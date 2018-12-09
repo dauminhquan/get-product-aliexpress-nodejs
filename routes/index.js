@@ -275,7 +275,7 @@ async function checkEPacket(item_sku) {
                 if(maxDate.length > 1)
                 {
                     maxDate = maxDate[1]
-                    if((i.isTracked == true && parseInt(maxDate) < 40 && (i.localPrice < result.price || result.price == -1)) || i.companyDisplayName == "ePacket")
+                    if(/*(i.isTracked == true && parseInt(maxDate) < 40 && (i.localPrice < result.price || result.price == -1)) || */i.companyDisplayName == "ePacket")
                     {
                         result.result = true
                         result.price = i.localPrice
@@ -295,7 +295,7 @@ async function checkEPacket(item_sku) {
                 if(maxDate.length > 1)
                 {
                     maxDate = maxDate[1]
-                    if((i.isTracked == true && parseInt(maxDate) < 40 && (i.localPrice < result.price || result.price == -1)) || i.companyDisplayName == "ePacket")
+                    if(/*(i.isTracked == true && parseInt(maxDate) < 40 && (i.localPrice < result.price || result.price == -1)) ||*/ i.companyDisplayName == "ePacket")
                     {
                         result.result = true
                         result.price = i.localPrice
@@ -304,7 +304,6 @@ async function checkEPacket(item_sku) {
                 }
             })
         }
-
     }).catch(err => {
         console.log('loi check e packet')
     })
