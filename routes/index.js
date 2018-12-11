@@ -524,15 +524,15 @@ function getColors($,price,des,parent_sku,main_image_url){
                                 break;
                             }
                         }
-                        let main_image_url = colors[i].image
+                        let main_image_url1 = colors[i].image
 
                         //todo Loi hinh anh
-                        if(main_image_url == undefined)
+                        if(main_image_url1 != undefined)
                         {
-                            break
+                            main_image_url = main_image_url1.replace('_50x50.jpg','')
+                            main_image_url = main_image_url.replace('_50x50.jpeg','')
+
                         }
-                        main_image_url = main_image_url.replace('_50x50.jpg','')
-                        main_image_url = main_image_url.replace('_50x50.jpeg','')
                         data.push({
                             color_name: colors[i].color,
                             main_image_url: main_image_url,
@@ -547,6 +547,7 @@ function getColors($,price,des,parent_sku,main_image_url){
                             color_map: color_map
                         })
                         break;
+
                     }
                 }
 
@@ -579,25 +580,27 @@ function getColors($,price,des,parent_sku,main_image_url){
                     }
 
                     //todo Loi hinh anh
-                    if(main_image_url == undefined)
+                    if(main_image_url != undefined)
                     {
-                        break
+                        main_image_url = main_image_url.replace('_50x50.jpg','')
+                        main_image_url = main_image_url.replace('_50x50.jpeg','')
+                        data.push({
+                            size_name: sizes[j],
+                            standard_price: price[key],
+                            product_description: des,
+                            parent_child: 'Child',
+                            relationship_type: 'variation',
+                            variation_theme: 'SizeName',
+                            parent_sku: parent_sku,
+                            item_sku: parent_sku+'-size'+(j+1),
+                            main_image_url: main_image_url,
+                            size_map: size_map
+                        })
+                    }
+                    else{
+                        console.log('error: ', parent_sku)
                     }
 
-                    main_image_url = main_image_url.replace('_50x50.jpg','')
-                    main_image_url = main_image_url.replace('_50x50.jpeg','')
-                    data.push({
-                        size_name: sizes[j],
-                        standard_price: price[key],
-                        product_description: des,
-                        parent_child: 'Child',
-                        relationship_type: 'variation',
-                        variation_theme: 'SizeName',
-                        parent_sku: parent_sku,
-                        item_sku: parent_sku+'-size'+(j+1),
-                        main_image_url: main_image_url,
-                        size_map: size_map
-                    })
                 }
             })
         }
@@ -733,8 +736,8 @@ async function getInfoProduct(item_sku,price_ship,multiplication,keyword_id){
                     putToServer(products)
                 }
                 else{
-
-                    let product_child = getColors($,price_data,des,item_sku)
+                    let main_image_url = image_data.main_image_url
+                    let product_child = getColors($,price_data,des,item_sku,main_image_url)
                     if(product_child.length > 0)
                     {
                         let product = {
