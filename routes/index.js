@@ -11,6 +11,7 @@ const tokenPage = 'N89B8uyqZd4c9icGslTe'
 const tokenPut = '4PyLWsy0jGGLpaON92fI'
 const tokenDone = 'n10JJg7XfBc4XWdbt9lw'
 const timeNextPage = 60000
+const timeBlock = 600000
 const serverPHP = 'http://13.59.122.59'
 // const serverPHP = 'http://localhost:8000'
 const SearchKeyword = require('./../model/searches')
@@ -148,12 +149,12 @@ async function searchProduct(url,multiplication,search,keyword_id,page)
                                 console.log(err)
                             }else{
                                 setTimeout(async function () {
-                                    await searchProduct(url,multiplication,search,keyword_id,parseInt(page) + 1)
-                                },timeNextPage)
+                                    await searchProduct(url,multiplication,search,keyword_id,parseInt(page))
+                                },timeBlock)
                             }
                         })
                     }
-                          else {
+                    else {
                         for(let i = 0 ;i < products.length ; i++)
                         {
                             let url = $(products[i]).find('a.picRind:eq(0)')
@@ -172,7 +173,8 @@ async function searchProduct(url,multiplication,search,keyword_id,page)
 
                                 if(checkEpacket.result == true)
                                 {
-                                    await getInfoProduct(item_sku,checkEpacket.price,multiplication,keyword_id,search)
+                                    await timeout(3000)
+                                    getInfoProduct(item_sku,checkEpacket.price,multiplication,keyword_id,search)
                                 }
                             }
                         }
@@ -182,7 +184,7 @@ async function searchProduct(url,multiplication,search,keyword_id,page)
                             if($(aNext).attr('href') != undefined)
                             {
                                 setTimeout(async function () {
-                                   await searchProduct('https:'+$(aNext).attr('href'),multiplication,search,keyword_id,parseInt(page) + 1)
+                                    await searchProduct('https:'+$(aNext).attr('href'),multiplication,search,keyword_id,parseInt(page) + 1)
                                 },timeNextPage)
                             }
                             else{
@@ -208,7 +210,7 @@ async function searchProduct(url,multiplication,search,keyword_id,page)
                         }
                     }
                 }).catch(err => {
-                	console.log(err)
+                    console.log(err)
                     console.log('Loi request')
                 })
             }
@@ -295,7 +297,7 @@ async function checkEPacket(item_sku) {
             })
         }
         else{
-             result = {
+            result = {
                 result: false,
                 price : -1
             }
@@ -522,6 +524,12 @@ function getColors($,price,des,parent_sku,main_image_url){
                             }
                         }
                         let main_image_url = colors[i].image
+
+                        //todo Loi hinh anh
+                        if(main_image_url == undefined)
+                        {
+                            break
+                        }
                         main_image_url = main_image_url.replace('_50x50.jpg','')
                         main_image_url = main_image_url.replace('_50x50.jpeg','')
                         data.push({
@@ -568,6 +576,13 @@ function getColors($,price,des,parent_sku,main_image_url){
                             break;
                         }
                     }
+
+                    //todo Loi hinh anh
+                    if(main_image_url == undefined)
+                    {
+                        break
+                    }
+
                     main_image_url = main_image_url.replace('_50x50.jpg','')
                     main_image_url = main_image_url.replace('_50x50.jpeg','')
                     data.push({
@@ -642,9 +657,6 @@ async function getInfoProduct(item_sku,price_ship,multiplication,keyword_id){
                 context = context.slice(0,index)
 
 
-
-
-
                 let urlGetDes = context
                 //check thuong hieu
                 let branchName =  $('.product-property-list:eq(0)').find('li:contains(Brand Name)')
@@ -654,34 +666,76 @@ async function getInfoProduct(item_sku,price_ship,multiplication,keyword_id){
                 }
                 var brandName = $(branchName).find('span:eq(1)').text()
 
-                let tradeMark = await checkTradeMark(encodeURI(brandName))
+                // let tradeMark = await checkTradeMark(encodeURI(brandName))
 
                 let item_name = $('h1.product-name:eq(0)').text().replace(new RegExp(brandName,'i'),'')
 
+                let image_data = getImage($)
 
-                if(tradeMark == false)
+                let des = await getDesc(urlGetDes,brandName)
+                let specifics_bulletpoints = getSpecifics($)
+                if((des.toString().length+specifics_bulletpoints.specifics.toString().length) < 2000)
                 {
+                    des +=specifics_bulletpoints.specifics
+                }
+                let products = []
 
-                    //get mo ta san pham
-                    let image_data = getImage($)
 
-                    let des = await getDesc(urlGetDes,brandName)
-                    let specifics_bulletpoints = getSpecifics($)
-                    if((des.toString().length+specifics_bulletpoints.specifics.toString().length) < 2000)
-                    {
-                        des +=specifics_bulletpoints.specifics
+
+                let price_data  = helper.getPrice($,skuProducts,price_ship,multiplication)
+
+                if(Object.keys(price_data).length === 0)
+                {
+                    // khong co bien the
+
+                    let price = (parseInt($('#j-sku-discount-price').text()) + parseInt(price_ship)) * multiplication + 1.99
+                    let product = {
+                        item_sku:"",
+                        item_name:"",
+                        standard_price:"",
+                        main_image_url:"",
+                        swatch_image_url:"",
+                        other_image_url1:"",
+                        other_image_url2:"",
+                        other_image_url3:"",
+                        other_image_url4:"",
+                        other_image_url5:"",
+                        other_image_url6:"",
+                        other_image_url7:"",
+                        other_image_url8:"",
+                        other_image_url9:"",
+                        other_image_url10:"",
+                        parent_child:"",
+                        relationship_type:"",
+                        parent_sku:"",
+                        variation_theme:"",
+                        product_description:"",
+                        bullet_point1:"",
+                        bullet_point2:"",
+                        bullet_point3:"",
+                        bullet_point4:"",
+                        bullet_point5:"",
+                        color_name:"",
+                        color_map:"",
+                        size_name:"",
+                        size_map:"",
+                        keyword_id: keyword_id
                     }
-                    let products = []
 
+                    product = updateInfoProduct(product,image_data)
+                    product = updateInfoProduct(product,specifics_bulletpoints.bulletpoints)
+                    product.product_description = des
+                    product.item_sku = item_sku
+                    product.item_name = item_name
+                    product.standard_price = price
+                    products.push(product)
+                    putToServer(products)
+                }
+                else{
 
-
-                    let price_data  = helper.getPrice($,skuProducts,price_ship,multiplication)
-
-                    if(Object.keys(price_data).length === 0)
+                    let product_child = getColors($,price_data,des,item_sku)
+                    if(product_child.length > 0)
                     {
-                        // khong co bien the
-
-                        let price = (parseInt($('#j-sku-discount-price').text()) + parseInt(price_ship)) * multiplication + 1.99
                         let product = {
                             item_sku:"",
                             item_name:"",
@@ -714,114 +768,73 @@ async function getInfoProduct(item_sku,price_ship,multiplication,keyword_id){
                             size_map:"",
                             keyword_id: keyword_id
                         }
-
                         product = updateInfoProduct(product,image_data)
-                        product = updateInfoProduct(product,specifics_bulletpoints.bulletpoints)
+                        product =  updateInfoProduct(product,specifics_bulletpoints.bulletpoints)
                         product.product_description = des
                         product.item_sku = item_sku
                         product.item_name = item_name
-                        product.standard_price = price
+                        product.parent_child = "Parent"
+                        product.relationship_type = ""
+                        product.variation_theme = product_child[0].variation_theme == undefined ? "" :  product_child[0].variation_theme
                         products.push(product)
-                        putToServer(products)
-                    }
-                    else{
-
-                        let product_child = getColors($,price_data,des,item_sku)
                         if(product_child.length > 0)
                         {
-                            let product = {
-                                item_sku:"",
-                                item_name:"",
-                                standard_price:"",
-                                main_image_url:"",
-                                swatch_image_url:"",
-                                other_image_url1:"",
-                                other_image_url2:"",
-                                other_image_url3:"",
-                                other_image_url4:"",
-                                other_image_url5:"",
-                                other_image_url6:"",
-                                other_image_url7:"",
-                                other_image_url8:"",
-                                other_image_url9:"",
-                                other_image_url10:"",
-                                parent_child:"",
-                                relationship_type:"",
-                                parent_sku:"",
-                                variation_theme:"",
-                                product_description:"",
-                                bullet_point1:"",
-                                bullet_point2:"",
-                                bullet_point3:"",
-                                bullet_point4:"",
-                                bullet_point5:"",
-                                color_name:"",
-                                color_map:"",
-                                size_name:"",
-                                size_map:"",
-                                keyword_id: keyword_id
-                            }
-                            product = updateInfoProduct(product,image_data)
-                            product =  updateInfoProduct(product,specifics_bulletpoints.bulletpoints)
-                            product.product_description = des
-                            product.item_sku = item_sku
-                            product.item_name = item_name
-                            product.parent_child = "Parent"
-                            product.relationship_type = ""
-                            product.variation_theme = product_child[0].variation_theme == undefined ? "" :  product_child[0].variation_theme
-                            products.push(product)
-                            if(product_child.length > 0)
-                            {
-                                product_child.forEach(item => {
-                                    let temp = {
-                                        item_sku:"",
-                                        item_name:"",
-                                        standard_price:"",
-                                        main_image_url:"",
-                                        swatch_image_url:"",
-                                        other_image_url1:"",
-                                        other_image_url2:"",
-                                        other_image_url3:"",
-                                        other_image_url4:"",
-                                        other_image_url5:"",
-                                        other_image_url6:"",
-                                        other_image_url7:"",
-                                        other_image_url8:"",
-                                        other_image_url9:"",
-                                        other_image_url10:"",
-                                        parent_child:"",
-                                        relationship_type:"",
-                                        parent_sku:"",
-                                        variation_theme:"",
-                                        product_description:"",
-                                        bullet_point1:"",
-                                        bullet_point2:"",
-                                        bullet_point3:"",
-                                        bullet_point4:"",
-                                        bullet_point5:"",
-                                        color_name:"",
-                                        color_map:"",
-                                        size_name:"",
-                                        size_map:"",
-                                        keyword_id: keyword_id
-                                    }
-                                    temp =  updateInfoProduct(temp,image_data)
-                                    temp = updateInfoProduct(temp,specifics_bulletpoints.bulletpoints)
-                                    temp.product_description = des
-                                    temp.item_sku = item.item_sku
-                                    temp.item_name = item_name
-                                    temp.standard_price = item.standard_price
-                                    temp = updateInfoProduct(temp,item)
-                                    products.push(temp)
-                                })
-                            }
-                            putToServer(products)
+                            product_child.forEach(item => {
+                                let temp = {
+                                    item_sku:"",
+                                    item_name:"",
+                                    standard_price:"",
+                                    main_image_url:"",
+                                    swatch_image_url:"",
+                                    other_image_url1:"",
+                                    other_image_url2:"",
+                                    other_image_url3:"",
+                                    other_image_url4:"",
+                                    other_image_url5:"",
+                                    other_image_url6:"",
+                                    other_image_url7:"",
+                                    other_image_url8:"",
+                                    other_image_url9:"",
+                                    other_image_url10:"",
+                                    parent_child:"",
+                                    relationship_type:"",
+                                    parent_sku:"",
+                                    variation_theme:"",
+                                    product_description:"",
+                                    bullet_point1:"",
+                                    bullet_point2:"",
+                                    bullet_point3:"",
+                                    bullet_point4:"",
+                                    bullet_point5:"",
+                                    color_name:"",
+                                    color_map:"",
+                                    size_name:"",
+                                    size_map:"",
+                                    keyword_id: keyword_id
+                                }
+                                temp =  updateInfoProduct(temp,image_data)
+                                temp = updateInfoProduct(temp,specifics_bulletpoints.bulletpoints)
+                                temp.product_description = des
+                                temp.item_sku = item.item_sku
+                                temp.item_name = item_name
+                                temp.standard_price = item.standard_price
+                                temp = updateInfoProduct(temp,item)
+                                products.push(temp)
+                            })
                         }
+                        putToServer(products)
                     }
                 }
-                else{
-                    // console.log('co bi ban quyen')
-                }
+
+                // if(tradeMark == false)
+                // {
+                //
+                //     //get mo ta san pham
+                //
+                // }
+                // else{
+                //     // console.log('co bi ban quyen')
+                // }
                 //check thuong hieu
 
                 // gia san pham
@@ -854,6 +867,10 @@ function putToServer(data) {
     }).catch(err => {
         console.log('Loi tu server')
     })
+}
+
+function timeout(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 module.exports = router;
