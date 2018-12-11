@@ -12,6 +12,7 @@ const tokenPut = '4PyLWsy0jGGLpaON92fI'
 const tokenDone = 'n10JJg7XfBc4XWdbt9lw'
 const timeNextPage = 60000
 const timeBlock = 600000
+const timeGetProduct = 5000
 const serverPHP = 'http://13.59.122.59'
 // const serverPHP = 'http://localhost:8000'
 const SearchKeyword = require('./../model/searches')
@@ -173,7 +174,7 @@ async function searchProduct(url,multiplication,search,keyword_id,page)
 
                                 if(checkEpacket.result == true)
                                 {
-                                    await timeout(3000)
+                                    await timeout(timeGetProduct)
                                     getInfoProduct(item_sku,checkEpacket.price,multiplication,keyword_id,search)
                                 }
                             }
