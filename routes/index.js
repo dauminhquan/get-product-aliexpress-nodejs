@@ -37,9 +37,9 @@ router.get('/',async function(req, res, next) {
     // }).catch(err => {
     //     console.log(err)
     // })
-    return res.json({
-        auth: "reject"
-    })
+    console.log(req.connection.remoteAddress)
+
+    return res.send('Dropship from Ali')
 });
 
 router.get('/stop-search',function (req,res) {
