@@ -263,8 +263,15 @@ async function getDesc(url,brandName)
     }).catch(err => {
         console.log('Loi lay mo ta san pham')
     })
+    let result = ""
+    des.forEach(item => {
+        if(result.length < 1800)
+        {
 
-    return '<p>'+des.join('</p><p>')+'</p>'
+            result += '<p>'+item+'</p>'
+        }
+    })
+    return result
 }
 
 
