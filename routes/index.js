@@ -38,7 +38,7 @@ router.get('/',async function(req, res, next) {
     //     console.log(err)
     // })
     console.log(req.connection.remoteAddress)
-
+    console.log(new Date())
     return res.send('Dropship from Ali')
 });
 
