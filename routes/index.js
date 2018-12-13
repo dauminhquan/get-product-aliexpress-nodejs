@@ -14,6 +14,7 @@ const timeNextPage = 60000
 const timeBlock = 600000
 const timeGetProduct = 5000
 const serverPHP = 'http://13.59.122.59'
+const Contact = require('../model/contact')
 // const serverPHP = 'http://localhost:8000'
 const SearchKeyword = require('./../model/searches')
 
@@ -39,9 +40,22 @@ router.get('/',async function(req, res, next) {
     // })
     console.log(req.connection.remoteAddress)
     console.log(new Date())
-    return res.send('Dropship from Ali')
+    return res.render('index')
 });
-
+router.post('/',function(req,res,next){
+	let contact = req.body.contact
+    console.log(contact)
+    let contact_sv = new Contact({
+        text: contact
+    })
+    contact_sv.save(function(err) {
+        if(err)
+        {
+            console.log(err)
+        }
+    })
+    return res.send('thanks you!')
+});
 router.get('/stop-search',function (req,res) {
     let token = req.query.token
     if(token != tokenStop)
