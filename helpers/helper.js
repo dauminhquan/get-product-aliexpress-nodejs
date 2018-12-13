@@ -53,7 +53,7 @@ module.exports = {
             })
             if(getPriceData != undefined)
             {
-                price_text_data[item.text] = getPriceData.skuVal.actSkuMultiCurrencyDisplayPrice == undefined ? ((parseInt(getPriceData.skuVal.skuMultiCurrencyDisplayPrice) + price_ship) * multiplication + 1.99) : (((parseInt(getPriceData.skuVal.actSkuMultiCurrencyDisplayPrice)) + parseInt(price_ship)) * multiplication + 1.99).toString()
+                price_text_data[item.text] = getPriceData.skuVal.actSkuMultiCurrencyDisplayPrice == undefined ? ((parseInt(getPriceData.skuVal.skuMultiCurrencyDisplayPrice) + parseInt(price_ship)) * multiplication + 1.99) : ((parseInt(getPriceData.skuVal.actSkuMultiCurrencyDisplayPrice) + parseInt(price_ship)) * multiplication + 1.99)
             }
         })
         return price_text_data

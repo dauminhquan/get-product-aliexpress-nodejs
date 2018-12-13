@@ -21,7 +21,7 @@ const colorMap = ["Beige","Black","Blue","Bronze","Brown","Clear","Copper","Crea
 const sizeMap = ["L","M","S","XL","XS","XXL","XXS"]
 
 router.get('/',async function(req, res, next) {
-    // let item_sku = '32369488999'
+    // let item_sku = '32773103423'
     //
     // let checkEpacket = await checkEPacket(item_sku)
     //
@@ -29,7 +29,7 @@ router.get('/',async function(req, res, next) {
     // {
     //     getInfoProduct(item_sku,checkEpacket.price,5,1,'a')
     // }
-    //
+
     // checkEPacket(item_sku);
 
     // axios.get('https://www.aliexpress.com/wholesale?isPremium=y&SearchText=bundles+').then(response => {
@@ -248,6 +248,7 @@ async function getDesc(url,brandName)
         const { window } = new JSDOM('<div id="app-des-content">'+response.data+'</div>');
         const $ = require('jquery')(window);
         let text = $('#app-des-content').text()
+        text = text.replace(/\t/g,'\n')
         text = text.trim().split('\n').filter(item => {
             return item.replace(/\s/g, '').length > 0
         })
@@ -264,13 +265,31 @@ async function getDesc(url,brandName)
         console.log('Loi lay mo ta san pham')
     })
     let result = ""
-    des.forEach(item => {
-        if(result.length < 1800)
-        {
+    if(des.length > 0)
+    {
+        des.forEach(item => {
+            if((result + '<p>'+item+'</p>').length < 2000)
+            {
 
-            result += '<p>'+item+'</p>'
+                result += '<p>'+item+'</p>'
+            }
+        })
+        if(result == "")
+        {
+            result = '<p>'
+            des.forEach(item => {
+                for(let i = 0 ; i < item.length ; i ++)
+                {
+                    if((result + item[i]).length < 1990)
+                    {
+                        result+=item[i]
+                    }
+                }
+            })
+            result+='</p>'
         }
-    })
+    }
+
     return result
 }
 
