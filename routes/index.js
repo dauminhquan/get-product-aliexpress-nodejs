@@ -39,7 +39,7 @@ router.get('/',async function(req, res, next) {
     // })
     console.log(req.connection.remoteAddress)
     console.log(new Date())
-    return res.send('Dropship from Ali')
+    return res.send('Dropship from Ali - Tool get product - 5s per product - 60s per page - max 1 -> 3 keyword per day')
 });
 
 router.get('/stop-search',function (req,res) {
