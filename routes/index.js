@@ -21,7 +21,7 @@ const SearchKeyword = require('./../model/searches')
 const colorMap = ["Beige","Black","Blue","Bronze","Brown","Clear","Copper","Cream","Gold","Green","Grey","Metallic","Multi-colored","Orange","Pink","Purple","Red","Silver","White","Yellow"]
 const sizeMap = ["L","M","S","XL","XS","XXL","XXS"]
 
-router.get('/',async function(req, res, next) {
+/*router.get('/',async function(req, res, next) {
     // let item_sku = '32773103423'
     //
     // let checkEpacket = await checkEPacket(item_sku)
@@ -55,7 +55,7 @@ router.post('/',function(req,res,next){
         }
     })
     return res.send('thanks you!')
-});
+});*/
 router.get('/stop-search',function (req,res) {
     let token = req.query.token
     if(token != tokenStop)
