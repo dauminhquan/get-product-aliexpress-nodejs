@@ -151,6 +151,7 @@ async function searchProduct(url,multiplication,search,keyword_id,page)
             }
             else{
                 await axios.get(url).then(async response => {
+                    console.log('vua gui 1 request')
                     const { window } = new JSDOM(response.data);
                     const $ = require('jquery')(window);
                     let products = $('.pic')
@@ -240,6 +241,7 @@ async function checkTradeMark(textBrandName){
     let url = 'https://www.trademarkia.com/trademarks-search.aspx?tn=' + textBrandName
     const $ = require('jquery')
     await axios.get(url).then(response => {
+        console.log('vua gui 1 request')
         const { window } = new JSDOM(response.data);
         const $ = require('jquery')(window);
         let bodyTable = $(".table.tablesaw.tablesaw-stack").find("tbody")
@@ -259,6 +261,7 @@ async function getDesc(url,brandName)
 {
     let des = []
     await axios.get(url).then(response => {
+        console.log('vua gui 1 request')
         const { window } = new JSDOM('<div id="app-des-content">'+response.data+'</div>');
         const $ = require('jquery')(window);
         let text = $('#app-des-content').text()
@@ -316,6 +319,7 @@ async function checkEPacket(item_sku) {
         min_date: 35
     }
     await axios.get(`https://freight.aliexpress.com/ajaxFreightCalculateService.htm?productid=${item_sku}&country=US&abVersion=1`).then(response => {
+        console.log('vua gui 1 request')
         let ships = JSON.parse(response.data.replace('(','').replace(')',''))
 
         if(ships.freight != undefined)
@@ -683,6 +687,7 @@ async function getInfoProduct(item_sku,price_ship,multiplication,keyword_id){
             console.log('Dang lay thong tin san pham: ',item_sku)
             let info = []
             await axios.get(`https://www.aliexpress.com/item/a/${item_sku}.html`).then(async response => {
+                console.log('vua gui 1 request')
                 const { window } = new JSDOM(response.data);
                 const $ = require('jquery')(window);
                 const textSkuProducts = $('script:contains(skuProducts)').text()
@@ -883,6 +888,7 @@ async function getInfoProduct(item_sku,price_ship,multiplication,keyword_id){
 
                 // gia san pham
             }).catch(err => {
+
                 console.log(err)
                 console.log('loi lay thong tin san pham')
             })
