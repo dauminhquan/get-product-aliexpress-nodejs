@@ -7,6 +7,7 @@ const app = serverConfig.app;
 const server = serverConfig.server;
 const sockets = require('./sockets/index');
 const indexRouter = require('./routes/index');
+const keywordRouter = require('./routes/keyword');
 //
 // sockets.init(server);
 modules.init(app);
@@ -25,7 +26,7 @@ app.use((req,res,next) => {
 })
 // All Router
 app.use('/', indexRouter);
-
+app.use('/get-keyword', keywordRouter);
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
   next(createError(404));

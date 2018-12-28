@@ -14,6 +14,8 @@ const timeNextPage = 60000
 const timeBlock = 600000
 const timeGetProduct = 10000
 const serverPHP = 'http://13.59.122.59'
+const API_URL = 'https://api.aliseeks.com'
+const TOKEN = 'KYKOFOCJUMJZZZOK'
 const Contact = require('../model/contact')
 // const serverPHP = 'http://localhost:8000'
 const SearchKeyword = require('./../model/searches')
@@ -56,6 +58,14 @@ router.post('/',function(req,res,next){
     })
     return res.send('thanks you!')
 });*/
+
+router.get('/',function(req,res,next){
+    getInfoProductApi('32826897725')
+    return res.send(
+        'ok'
+    )
+})
+
 router.get('/stop-search',function (req,res) {
     let token = req.query.token
     if(token != tokenStop)
@@ -76,7 +86,6 @@ router.get('/stop-search',function (req,res) {
         }
     })
 })
-
 
 router.get('/search',function(req,res,next){
     let query = req.query.query
@@ -125,7 +134,6 @@ router.get('/search',function(req,res,next){
         auth: "reject"
     })
 })
-
 
 async function searchProduct(url,multiplication,search,keyword_id,page)
 {
@@ -256,7 +264,6 @@ async function checkTradeMark(textBrandName){
     return trademark;
 }
 
-
 async function getDesc(url,brandName)
 {
     let des = []
@@ -309,7 +316,6 @@ async function getDesc(url,brandName)
 
     return result
 }
-
 
 async function checkEPacket(item_sku) {
     let result = {
@@ -366,7 +372,6 @@ async function checkEPacket(item_sku) {
     return result
 }
 
-
 function getSpecifics($){
     let specifics = $('.product-property-list:eq(0)').html()
     let outer_material_types = $('.product-property-list:eq(0)').find('span:contains(Material):eq(0)').next('span').text()
@@ -416,7 +421,6 @@ function getSpecifics($){
         bulletpoints: bulletpoints
     }
 }
-
 
 function getColors($,price,des,parent_sku,main_image_url){
     $.expr[':'].contains = function(a, i, m) {
@@ -652,7 +656,6 @@ function getColors($,price,des,parent_sku,main_image_url){
     return data
 }
 
-
 function getImage($){
     let other_images = ''
     let main_image = ''
@@ -728,9 +731,7 @@ async function getInfoProduct(item_sku,price_ship,multiplication,keyword_id){
                     des +=specifics_bulletpoints.specifics
                 }
                 let products = []
-
-
-
+                
                 let price_data  = helper.getPrice($,skuProducts,price_ship,multiplication)
 
                 if(Object.keys(price_data).length === 0)
@@ -922,5 +923,152 @@ function putToServer(data) {
 function timeout(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
+
+function getInfoProductApi(productId)
+{
+    axios.post(API_URL+'/v1/products/details',{
+        productId: productId,
+        currency: 'USD',
+        locale: 'en_US'
+    },
+        {
+            headers:{
+                "X-Api-Client-Id" : 'KYKOFOCJUMJZZZOK',
+            }
+        }
+        ).then(async data => {
+        let infoProduct = data.data
+        // kiem tra co bien the khong
+        if(infoProduct.skuProperties.length == 0)
+        {
+            let product = {
+
+            }
+            product.standard_price = infoProduct.prices[0].maxAmount.value
+            product.item_name = infoProduct.title
+            for(let i = 1 ; i <= 10 ; i++)
+            {
+                let other_image = infoProduct.productImages[i - 1]
+                if(other_image != undefined)
+                {
+                    product['other_image_url'+i] = other_image
+                }
+                else{
+                    product['other_image_url'+i] = null
+                }
+            }
+
+            // khong co bien the
+        }
+        else{
+            //mau - kich cỡ
+            // lay tat ca cac mau
+            // lay tat ca cac size
+            // sau do noi thanh chuoi
+            let variations = await getVariationApi(productId)
+            if(variations == null)
+            {
+                console.log('loi lay variations san pham',productId)
+                return false
+            }
+            let colors = infoProduct.skuProperties.find(item => {
+                return item.propertyId == 14
+            })
+            let sizes = infoProduct.skuProperties.find(item => {
+                return item.propertyId == 5
+            })
+            let colors_sizes = []
+            if(colors.values.length > 0 )
+            {
+
+                if(sizes.values.length > 0)
+                {
+                    colors.values.forEach(color => {
+                        sizes.values.forEach(size => {
+                            colors_sizes.push([
+                                color.propertyValueId,size.propertyValueId
+                                ])
+                        })
+                    })
+                    // lay duoc gia va ten tung valiation
+                    let result = []
+                    let products_variation = []
+                    colors_sizes.forEach(color_size => {
+                        variations.forEach(item => {
+                            if(item.stock > 0)
+                            {
+                                if(checkHasVariation(item,color_size))
+                                {
+                                    // ten
+                                    // gia
+                                    let product = {
+
+                                    }
+                                    let color_name = colors.values.find(color => {
+                                        return color.propertyValueId == color_size[0]
+                                    })
+                                    color_name = color_name.propertyValueDisplayName
+
+                                    let size_name = sizes.values.find(size => {
+                                        return size.propertyValueId == color_size[1]
+                                    })
+                                    size_name = size_name.propertyValueDisplayName
+                                    console.log(size_name,color_name)
+                                    product.size_name = size_name
+                                    product.color_name = color_name
+                                    product.standard_price = item.price.value
+                                    products_variation.push(product)
+                                }
+                            }
+                        })
+                    })
+                    console.log(products_variation)
+                }
+                else{
+
+                }
+            }
+            else if(sizes.values.length > 0)
+            {
+
+            }
+        }
+    }).catch(err => {
+        console.log(err)
+    })
+}
+
+function checkHasVariation(item_variation,color_size)
+{
+    for(let i = 0 ; i < color_size.length ; i++)
+    {
+        if(!item_variation.propertyValueIds.includes(color_size[i]))
+        {
+            return false
+        }
+    }
+    return true
+}
+
+async function getVariationApi(productId){
+    let variation = null
+    await axios.post(API_URL+'/v1/products/variations',{
+            productId: productId,
+            currency: 'USD',
+            locale: 'en_US'
+        },
+        {
+            headers:{
+                "X-Api-Client-Id" : 'KYKOFOCJUMJZZZOK',
+            }
+        }
+    ).then(data => {
+        variation = data.data.variations
+    }).catch(err => {
+        console.log(err)
+    })
+    return variation
+}
+
 
 module.exports = router;
