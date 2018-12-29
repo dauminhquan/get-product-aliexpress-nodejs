@@ -57,7 +57,7 @@ module.exports = {
             }
         })
         return price_text_data
-    }
+    },
 };
 
 

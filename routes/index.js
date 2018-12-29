@@ -14,7 +14,6 @@ const timeNextPage = 60000
 const timeBlock = 600000
 const timeGetProduct = 10000
 const serverPHP = 'http://13.59.122.59'
-const API_URL = 'https://api.aliseeks.com'
 const TOKEN = 'KYKOFOCJUMJZZZOK'
 const Contact = require('../model/contact')
 // const serverPHP = 'http://localhost:8000'
@@ -22,42 +21,6 @@ const SearchKeyword = require('./../model/searches')
 
 const colorMap = ["Beige","Black","Blue","Bronze","Brown","Clear","Copper","Cream","Gold","Green","Grey","Metallic","Multi-colored","Orange","Pink","Purple","Red","Silver","White","Yellow"]
 const sizeMap = ["L","M","S","XL","XS","XXL","XXS"]
-
-/*router.get('/',async function(req, res, next) {
-    // let item_sku = '32773103423'
-    //
-    // let checkEpacket = await checkEPacket(item_sku)
-    //
-    // if(checkEpacket.result == true)
-    // {
-    //     getInfoProduct(item_sku,checkEpacket.price,5,1,'a')
-    // }
-
-    // checkEPacket(item_sku);
-
-    // axios.get('https://www.aliexpress.com/wholesale?isPremium=y&SearchText=bundles+').then(response => {
-    //     return res.send(response.data)
-    // }).catch(err => {
-    //     console.log(err)
-    // })
-    console.log(req.connection.remoteAddress)
-    console.log(new Date())
-    return res.render('index')
-});
-router.post('/',function(req,res,next){
-	let contact = req.body.contact
-    console.log(contact)
-    let contact_sv = new Contact({
-        text: contact
-    })
-    contact_sv.save(function(err) {
-        if(err)
-        {
-            console.log(err)
-        }
-    })
-    return res.send('thanks you!')
-});*/
 
 router.get('/',function(req,res,next){
     getInfoProductApi('32826897725')
@@ -135,8 +98,7 @@ router.get('/search',function(req,res,next){
     })
 })
 
-async function searchProduct(url,multiplication,search,keyword_id,page)
-{
+async function searchProduct(url,multiplication,search,keyword_id,page) {
     if(page < 1)
     {
         return false
@@ -159,7 +121,6 @@ async function searchProduct(url,multiplication,search,keyword_id,page)
             }
             else{
                 await axios.get(url).then(async response => {
-                    console.log('vua gui 1 request')
                     const { window } = new JSDOM(response.data);
                     const $ = require('jquery')(window);
                     let products = $('.pic')
@@ -249,7 +210,6 @@ async function checkTradeMark(textBrandName){
     let url = 'https://www.trademarkia.com/trademarks-search.aspx?tn=' + textBrandName
     const $ = require('jquery')
     await axios.get(url).then(response => {
-        console.log('vua gui 1 request')
         const { window } = new JSDOM(response.data);
         const $ = require('jquery')(window);
         let bodyTable = $(".table.tablesaw.tablesaw-stack").find("tbody")
@@ -264,11 +224,9 @@ async function checkTradeMark(textBrandName){
     return trademark;
 }
 
-async function getDesc(url,brandName)
-{
+async function getDesc(url,brandName) {
     let des = []
     await axios.get(url).then(response => {
-        console.log('vua gui 1 request')
         const { window } = new JSDOM('<div id="app-des-content">'+response.data+'</div>');
         const $ = require('jquery')(window);
         let text = $('#app-des-content').text()
@@ -325,7 +283,6 @@ async function checkEPacket(item_sku) {
         min_date: 35
     }
     await axios.get(`https://freight.aliexpress.com/ajaxFreightCalculateService.htm?productid=${item_sku}&country=US&abVersion=1`).then(response => {
-        console.log('vua gui 1 request')
         let ships = JSON.parse(response.data.replace('(','').replace(')',''))
 
         if(ships.freight != undefined)
@@ -679,8 +636,7 @@ function getImage($){
     return data
 }
 
-async function getInfoProduct(item_sku,price_ship,multiplication,keyword_id){
-
+async function getInfoProduct(item_sku,price_ship,multiplication,keyword_id,search){
     SearchKeyword.findOne({id : keyword_id},['id','block'], async function (err,doc) {
         if(err || doc == null)
         {
@@ -690,7 +646,6 @@ async function getInfoProduct(item_sku,price_ship,multiplication,keyword_id){
             console.log('Dang lay thong tin san pham: ',item_sku)
             let info = []
             await axios.get(`https://www.aliexpress.com/item/a/${item_sku}.html`).then(async response => {
-                console.log('vua gui 1 request')
                 const { window } = new JSDOM(response.data);
                 const $ = require('jquery')(window);
                 const textSkuProducts = $('script:contains(skuProducts)').text()
@@ -731,9 +686,9 @@ async function getInfoProduct(item_sku,price_ship,multiplication,keyword_id){
                     des +=specifics_bulletpoints.specifics
                 }
                 let products = []
-                
-                let price_data  = helper.getPrice($,skuProducts,price_ship,multiplication)
 
+                let price_data  = helper.getPrice($,skuProducts,price_ship,multiplication)
+                let generic_keywords = await getRootKeyWord(item_name,item_sku,search)
                 if(Object.keys(price_data).length === 0)
                 {
                     // khong co bien the
@@ -769,9 +724,9 @@ async function getInfoProduct(item_sku,price_ship,multiplication,keyword_id){
                         color_map:"",
                         size_name:"",
                         size_map:"",
-                        keyword_id: keyword_id
+                        keyword_id: keyword_id,
+                        generic_keywords: generic_keywords
                     }
-
                     product = updateInfoProduct(product,image_data)
                     product = updateInfoProduct(product,specifics_bulletpoints.bulletpoints)
                     product.product_description = des
@@ -816,7 +771,8 @@ async function getInfoProduct(item_sku,price_ship,multiplication,keyword_id){
                             color_map:"",
                             size_name:"",
                             size_map:"",
-                            keyword_id: keyword_id
+                            keyword_id: keyword_id,
+                            generic_keywords: generic_keywords
                         }
                         product = updateInfoProduct(product,image_data)
                         product =  updateInfoProduct(product,specifics_bulletpoints.bulletpoints)
@@ -860,7 +816,8 @@ async function getInfoProduct(item_sku,price_ship,multiplication,keyword_id){
                                     color_map:"",
                                     size_name:"",
                                     size_map:"",
-                                    keyword_id: keyword_id
+                                    keyword_id: keyword_id,
+                                    generic_keywords: generic_keywords
                                 }
                                 temp =  updateInfoProduct(temp,image_data)
                                 temp = updateInfoProduct(temp,specifics_bulletpoints.bulletpoints)
@@ -875,19 +832,6 @@ async function getInfoProduct(item_sku,price_ship,multiplication,keyword_id){
                         putToServer(products)
                     }
                 }
-
-                // if(tradeMark == false)
-                // {
-                //
-                //     //get mo ta san pham
-                //
-                // }
-                // else{
-                //     // console.log('co bi ban quyen')
-                // }
-                //check thuong hieu
-
-                // gia san pham
             }).catch(err => {
 
                 console.log(err)
@@ -897,8 +841,7 @@ async function getInfoProduct(item_sku,price_ship,multiplication,keyword_id){
     })
 }
 
-function updateInfoProduct(product,info)
-{
+function updateInfoProduct(product,info) {
     let keys = Object.keys(product)
     keys.forEach(key => {
         if(info[key] != undefined)
@@ -914,8 +857,9 @@ function putToServer(data) {
         data:data,
         token: tokenPut
     }).then(response => {
-        // console.log(response.data)
+        console.log(response.data)
     }).catch(err => {
+        console.log(err)
         console.log('Loi tu server')
     })
 }
@@ -924,8 +868,7 @@ function timeout(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-function getInfoProductApi(productId)
-{
+function getInfoProductApi(productId) {
     axios.post(API_URL+'/v1/products/details',{
         productId: productId,
         currency: 'USD',
@@ -1038,8 +981,7 @@ function getInfoProductApi(productId)
     })
 }
 
-function checkHasVariation(item_variation,color_size)
-{
+function checkHasVariation(item_variation,color_size) {
     for(let i = 0 ; i < color_size.length ; i++)
     {
         if(!item_variation.propertyValueIds.includes(color_size[i]))
@@ -1070,5 +1012,162 @@ async function getVariationApi(productId){
     return variation
 }
 
+async function getSearchTemKey(productName,productId,rootKeyWord){
+    return getRootKeyWord(productName,productId,rootKeyWord)
+}
+
+async function getKeyWordFromAmazon(queryKeyWord){
+    let keywords = []
+    for (let i = 0; i < queryKeyWord.length; i++) {
+        let url = `https://completion.amazon.com/api/2017/suggestions?lop=en_US&site-variant=desktop&client-info=amazon-search-ui&mid=ATVPDKIKX0DER&alias=aps&b2b=0&fresh=0&ks=86&prefix=${encodeURI(queryKeyWord[i])}&suggestion-type=keyword&fb=1`
+        await axios.get(url).then(response => {
+            let suggestions = response.data.suggestions
+            for (let i = 0; i < suggestions.length; i++) {
+                keywords.push(suggestions[i].value)
+            }
+        }).catch(err => {
+            console.log(err)
+        })
+
+    }
+    let result = []
+    keywords.forEach(item => {
+        if(!result.includes(item))
+        {
+            result.push(item)
+        }
+    })
+    let resultString = []
+    result.forEach(item => {
+        let tempItem = item.split(' ')
+        tempItem.forEach(value => {
+            // console.log(value)
+            if(!resultString.includes(value) && value.length > 2)
+            {
+                resultString.push(value)
+                if(resultString.join(' ').length > 245)
+                {
+                    resultString.pop()
+                }
+            }
+
+        })
+
+    })
+    console.log(resultString.join(' '))
+    return resultString.join(' ')
+}
+async function getRootKeyWord(productName,productId,rootKeyWord){
+    let url = `https://www.aliexpress.com/seo/detailCrosslinkAjax.htm?productId=${productId}`
+    let result  = []
+    await axios.get(url).then(response => {
+        response.data = `<div id="app-keyword">${response.data}</div>`
+        const { window } = new JSDOM(response.data);
+        const $ = require('jquery')(window);
+        let keyworks_a = $('#app-keyword').find('a')
+        let check = [
+        ]
+        for(let i = 0 ;i <keyworks_a.length ; i++)
+        {
+            check.push($(keyworks_a[i]).text())
+        }
+        let txt = productName
+        let keyword = rootKeyWord
+        let txtRemove = ["Wholesale","Price","Promotion","the","of","by","a","an","on","in","from","to","for","&","-","_","are","is","was","were","&","!","@","#","$","%","^","*","(",")","ares"]
+
+        check.forEach((item,index) => {
+            let result = checkInRemove(item)
+            if(result !== false)
+            {
+                check[index] = check[index].replace(result+" ","")
+                check[index] = check[index].replace(" "+result,"")
+                check[index] = check[index].replace(result,"")
+            }
+        })
+
+        check = check.filter(function (item,index) {
+            return index == check.findIndex((i) => {
+                return i.toString() == item.toString()
+            })
+        })
+
+        let checkData = []
+        check.forEach(item => {
+            item = item.split(" ")
+            if(!item.includes(""))
+            {
+                checkData.push({
+                    text: item,
+                    score: 0
+                })
+            }
+
+        })
+
+        let txtArr = txt.split(" ")
+
+        let keyworkArr = keyword.split(" ")
+
+
+        txtArr.forEach(txt => {
+            checkData.forEach((item,index) =>{
+                item.text.forEach(i => {
+                    if(i.toLowerCase() == txt.toLowerCase() && !txtRemove.includes(i) )
+                    {
+                        keyworkArr.forEach(txt1 => {
+                            item.text.forEach(i => {
+                                if(i.toLowerCase() == txt1.toLowerCase() && !txtRemove.includes(i) )
+                                {
+                                    checkData[index].score+=4
+                                }
+                                else{
+                                    checkData[index].score+=2
+                                }
+                            })
+                        })
+                    }
+                })
+
+            })
+        })
+        keyworkArr.forEach(txt => {
+            checkData.forEach((item,index) =>{
+                item.text.forEach(i => {
+                    if(i.toLowerCase() == txt.toLowerCase() && !txtRemove.includes(i) )
+                    {
+                        checkData[index].score+=1
+                    }
+                })
+
+            })
+        })
+        checkData = checkData.map(item => {
+            item.score = parseFloat(item.score / (item.text.length))
+            return item
+        })
+
+        checkData.sort(function (a,b) {
+            return b.score - a.score
+        })
+
+        for(let i = 0 ;i < checkData.length ; i++)
+        {
+            result.push(checkData[i].text.join(' '))
+        }
+    })
+    return getKeyWordFromAmazon(result)
+}
+function checkInRemove(str) {
+    let txtRemove = ["Wholesale","Price","Promotion"]
+    for(let i = 0 ;i <txtRemove.length;i++)
+    {
+        if(str.includes(txtRemove[i]))
+        {
+            return txtRemove[i]
+        }
+    }
+
+    return false
+}
 
 module.exports = router;
